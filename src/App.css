@@ -625,6 +625,7 @@ select {
   padding-bottom: 0;
 }
 
+
 .item-icon {
   width: 36px;
   height: 36px;
@@ -635,6 +636,10 @@ select {
   justify-content: center;
   color: var(--primary);
   flex-shrink: 0;
+}
+
+.item-icon.top {
+  align-self: flex-start;
 }
 
 .item-body {
@@ -943,6 +948,56 @@ select {
 }
 
 /* ===== Full Edit Form for Item ===== */
+
+/* ===== Tax Section (Global) ===== */
+.tax-section {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1.5px solid var(--gray-200);
+}
+
+.tax-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 10px;
+}
+
+.tax-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  padding: 4px 0;
+  color: var(--gray-600);
+}
+
+.tax-row.tax-total {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  border-top: 1px solid var(--gray-200);
+  margin-top: 6px;
+  padding-top: 8px;
+}
+
+.tax-input {
+  width: 60px;
+  padding: 4px 6px;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-align: center;
+  outline: none;
+}
+
+.tax-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
 .item-edit-full {
   padding: 4px 0;
 }

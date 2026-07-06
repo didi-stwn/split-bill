@@ -56,20 +56,19 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
 
   return (
     <div className="item-row">
-      <div className="item-icon">
+      <div className={`item-icon ${editing ? 'top' : ''}`}>
         <ReceiptText size={16} />
       </div>
-
       <div className="item-body">
         {editing ? (
           <div className="item-edit-full">
-            {/* Row 1: Description & Amount */}
+            {/* Row 1: Description, Amount */}
             <div className="form-row" style={{ marginBottom: 6 }}>
-              <div className="form-group">
+              <div className="form-group" style={{ flex: 1 }}>
                 <label>Description</label>
                 <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} onKeyDown={handleKey} autoFocus />
               </div>
-              <div className="form-group" style={{ maxWidth: 120 }}>
+              <div className="form-group" style={{ maxWidth: 110 }}>
                 <label>Amount</label>
                 <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={handleKey} min="0" step="100" />
               </div>
@@ -104,7 +103,7 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
             </div>
 
             {/* Save / Cancel */}
-            <div style={{marginTop: 12, display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+            <div style={{ marginTop: 12, display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
               <button className="btn btn-sm btn-outline" onClick={cancel}><X size={14} /> Cancel</button>
               <button className="btn btn-sm btn-primary" onClick={save}><Check size={14} /> Save</button>
             </div>
@@ -112,12 +111,18 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
         ) : (
           <>
             <div className="item-desc">{item.description}</div>
-            <div className="item-meta">{getPersonName(item.paidBy)} paid &middot; {splitLabel}</div>
+            <div className="item-meta">
+              {getPersonName(item.paidBy)} paid &middot; {splitLabel}
+            </div>
           </>
         )}
       </div>
 
-      {!editing && <div className="item-amount">Rp {item.amount.toLocaleString('id-ID')}</div>}
+      {!editing && (
+        <div className="item-amount" style={{ textAlign: 'right' }}>
+          <div>Rp {item.amount.toLocaleString('id-ID')}</div>
+        </div>
+      )}
 
       <div className="item-actions">
         {editing ? null : (

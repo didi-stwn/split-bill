@@ -8,6 +8,7 @@ import SummarySection from './components/SummarySection';
 export default function App() {
   const [people, setPeople] = useState([]);
   const [items, setItems] = useState([]);
+  const [globalTaxPercent, setGlobalTaxPercent] = useState(0);
 
   // ---- People ----
   const addPerson = useCallback((input) => {
@@ -77,8 +78,8 @@ export default function App() {
 
       <main className="app-main">
         <OcrScanner {...personProps} onAddItems={handleOcrItems} />
-        <ItemsSection {...personProps} items={items} onAdd={addItem} onDelete={deleteItem} onUpdate={updateItem} />
-        <SummarySection items={items} people={people} />
+        <ItemsSection {...personProps} items={items} onAdd={addItem} onDelete={deleteItem} onUpdate={updateItem} taxPercent={globalTaxPercent} onTaxPercentChange={setGlobalTaxPercent} />
+        <SummarySection items={items} people={people} taxPercent={globalTaxPercent} />
       </main>
     </div>
   );

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Package, Plus } from 'lucide-react';
+import { Package, Plus, Percent } from 'lucide-react';
 import ItemRow from './ItemRow';
 import PersonSelect from './PersonSelect';
 
-export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson }) {
+export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, taxPercent, onTaxPercentChange }) {
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
@@ -46,7 +46,11 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
   };
 
   const isValid = desc.trim() && parseFloat(amount) > 0 && paidBy && splitAmong.length > 0;
-  const totalItems = items.reduce((s, i) => s + i.amount, 0);
+
+  const calcTotalWithTax = (amt, pct) => amt * (1 + (pct || 0) / 100);
+  const subtotal = items.reduce((s, i) => s + i.amount, 0);
+  const taxAmount = calcTotalWithTax(subtotal, taxPercent) - subtotal;
+  const grandTotal = subtotal + taxAmount;
 
   return (
     <div className="card">
@@ -55,7 +59,8 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
           <Package size={20} /> Items
         </h2>
         <span className="card-badge">
-          {items.length} item{items.length !== 1 && 's'} &middot; Rp {totalItems.toLocaleString('id-ID')}
+          {items.length} item{items.length !== 1 && 's'}
+          · Rp {subtotal.toLocaleString('id-ID')}
         </span>
       </div>
 
@@ -66,7 +71,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
         </summary>
         <form onSubmit={handleSubmit} style={{ marginTop: 12 }}>
           <div className="form-row">
-            <div className="form-group">
+            <div className="form-group" style={{ flex: 1 }}>
               <label>Description</label>
               <input
                 type="text"
@@ -75,7 +80,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                 onChange={(e) => setDesc(e.target.value)}
               />
             </div>
-            <div className="form-group" style={{ maxWidth: 140 }}>
+            <div className="form-group" style={{ maxWidth: 130 }}>
               <label>Amount (Rp)</label>
               <input
                 type="number"
@@ -132,7 +137,6 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                 {people.length === 0 && <span className="muted">Add people first</span>}
               </div>
             </div>
-            {/* Quick-add person next to Split Among */}
             <div className="form-group" style={{ maxWidth: 160, flexShrink: 0 }}>
               <label>&nbsp;</label>
               <div className="quick-person-row">
@@ -182,6 +186,40 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
               onRemovePerson={onRemovePerson}
             />
           ))}
+
+          {/* ── Global Tax Section ── */}
+          <div className="tax-section">
+            <div className="tax-header">
+              <Percent size={16} /> Tax
+            </div>
+            <div className="tax-row">
+              <span>Subtotal</span>
+              <span>Rp {subtotal.toLocaleString('id-ID')}</span>
+            </div>
+            <div className="tax-row">
+              <span>Tax</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden' }}>
+                  <input
+                    type="number"
+                    className="tax-input"
+                    value={taxPercent}
+                    onChange={(e) => onTaxPercentChange(parseFloat(e.target.value) || 0)}
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    style={{ width: 50, border: 'none', borderRadius: 0, textAlign: 'center' }}
+                  />
+                  <span style={{ padding: '0 6px', fontSize: '0.82rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
+                </div>
+                <span>Rp {taxAmount.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+            <div className="tax-row tax-total">
+              <span>Grand Total</span>
+              <span>Rp {grandTotal.toLocaleString('id-ID')}</span>
+            </div>
+          </div>
         </div>
       )}
     </div>

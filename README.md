@@ -1,70 +1,97 @@
-# Getting Started with Create React App
+# SplitBill
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A frontend-only **SplitBill** application for splitting expenses among friends. Built with React and Tesseract.js for OCR receipt scanning — no backend, no database, everything runs entirely in the browser.
 
-## Available Scripts
+![SplitBill Screenshot](./public/favicon.svg)
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- **📷 Receipt Scanner** — Upload a receipt image and automatically parse item names & amounts using Tesseract.js (browser-based OCR)
+- **📝 Items Management** — Add, edit, and delete items with description, amount, payer, and split assignment
+- **👥 People Management** — Smart inline CRUD dropdown for creating, editing, or removing people directly in `Paid by` and `Split among` fields
+- **💰 Global Tax** — Set a single tax percentage applied to all items; shows subtotal, tax amount, and grand total
+- **📊 Settlement Summary** — Automatically computes who owes whom with greedy debtor→creditor matching; shows per-item amounts with tax breakdown
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Sections
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+The app is organized into three main sections:
 
-### `npm test`
+1. **Receipt Scanner** — Upload image → OCR → Edit parsed items (description, amount, payer, split) → Add all to items
+2. **Items** — Add new items manually, view/edit/delete existing items; global tax input at the bottom with subtotal/tax/grand-total
+3. **Summary** — Stats (items, people, subtotal, tax, total, settlements) and settlement transfer list showing who pays whom
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Tech Stack
 
-### `npm run build`
+| Technology | Purpose |
+|------------|---------|
+| [React 19](https://react.dev/) | UI framework |
+| [Tesseract.js](https://tesseract.projectnaptha.com/) | Browser-based OCR (WebAssembly) |
+| [lucide-react](https://lucide.dev/) | Icon library |
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Getting Started
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Prerequisites
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Node.js 16+
+- npm
 
-### `npm run eject`
+### Install
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+npm install
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Run (development)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm start
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Opens [http://localhost:3000](http://localhost:3000) in your browser. The page reloads on changes.
 
-## Learn More
+### Build (production)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npm run build
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Produces an optimised bundle in the `build/` folder. Ready for static deployment.
 
-### Code Splitting
+## Project Structure
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```
+src/
+├── App.js                  # Main orchestrator — state, callbacks, layout
+├── App.css                 # All component styles (light theme)
+├── components/
+│   ├── ItemsSection.js     # Items list + add form + global tax section
+│   ├── ItemRow.js          # Single item display & inline editing
+│   ├── OcrScanner.js       # Receipt image upload, OCR, parsed-items table
+│   ├── PersonSelect.js     # Smart dropdown: select/create/edit/delete people
+│   └── SummarySection.js   # Stats cards + settlement list (tax-aware)
+public/
+├── index.html              # Updated meta tags, favicon, Inter font
+├── manifest.json           # PWA manifest (SplitBill, blue theme)
+├── favicon.svg             # Receipt SVG icon
+└── robots.txt
+```
 
-### Analyzing the Bundle Size
+## Data Flow
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+1. **People** are stored in [`App.js`](src/App.js) state as `[{ id, name }]` and shared via `personProps`
+2. **Items** are stored as `[{ id, description, amount, paidBy, splitAmong }]` — no per-item tax (tax is global)
+3. **Global Tax** is a single `taxPercent` number in [`App.js`](src/App.js) state, passed down to `ItemsSection` and `SummarySection`
+4. **OCR** parses receipt lines with regex, returns items with default payer & split, then merged into items via `handleOcrItems`
+5. **Settlements** are computed in `SummarySection` using greedy matching: each item's total with tax is divided equally among the split group
 
-### Making a Progressive Web App
+## Usage
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+1. **Add people** — Click `Paid by` dropdown → `+ Add person` → type name, or use the `New name…` input next to `Split among`
+2. **Add items** — Click `Add Item` → fill description, amount, paid by, split → submit
+3. **Scan receipt** — Drop or click to upload image → wait for OCR → edit parsed items in the table → `Add All to Items`
+4. **Set tax** — At the bottom of Items section, enter a tax percentage; grand total updates automatically
+5. **View settlements** — The Summary section shows who owes whom, including tax in the calculations
 
-### Advanced Configuration
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT
