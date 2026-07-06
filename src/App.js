@@ -34,7 +34,12 @@ export default function App() {
 
   // ---- Items ----
   const addItem = useCallback((item) => {
-    setItems((prev) => [...prev, { ...item, id: crypto.randomUUID() }]);
+    setItems((prev) => [...prev, {
+      ...item,
+      id: crypto.randomUUID(),
+      useCustomTax: item.useCustomTax ?? false,
+      customTaxPercent: item.customTaxPercent ?? 0,
+    }]);
   }, []);
 
   const deleteItem = useCallback((id) => {
@@ -63,7 +68,6 @@ export default function App() {
   );
 
   const personProps = { people, onAddPerson: addPerson, onEditPerson: editPerson, onRemovePerson: removePerson };
-
   return (
     <div className="app-container">
       <header className="app-header">
@@ -78,7 +82,7 @@ export default function App() {
 
       <main className="app-main">
         <OcrScanner {...personProps} onAddItems={handleOcrItems} />
-        <ItemsSection {...personProps} items={items} onAdd={addItem} onDelete={deleteItem} onUpdate={updateItem} taxPercent={globalTaxPercent} onTaxPercentChange={setGlobalTaxPercent} />
+        <ItemsSection {...personProps} items={items} onAdd={addItem} onDelete={deleteItem} onUpdate={updateItem} taxPercent={globalTaxPercent} onTaxPercentChange={setGlobalTaxPercent} globalTaxPercent={globalTaxPercent} />
         <SummarySection items={items} people={people} taxPercent={globalTaxPercent} />
       </main>
     </div>

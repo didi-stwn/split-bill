@@ -1,16 +1,17 @@
-import { useMemo } from 'react';
-import { DollarSign, ArrowRight, CheckCircle2, Percent } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { DollarSign, ArrowRight, CheckCircle2, Percent, CheckSquare, Square } from 'lucide-react';
 
 function calcTotalWithTax(amount, taxPercent) {
   return amount * (1 + (taxPercent || 0) / 100);
 }
 
-function computeSettlements(items, people, taxPercent) {
+function computeSettlements(items, people, globalTaxPercent) {
   const balances = {};
   people.forEach((p) => (balances[p.id] = 0));
 
   items.forEach((item) => {
-    const total = calcTotalWithTax(item.amount, taxPercent);
+    const effectiveTax = item.useCustomTax ? (item.customTaxPercent ?? 0) : globalTaxPercent;
+    const total = calcTotalWithTax(item.amount, effectiveTax);
     const share = total / item.splitAmong.length;
     balances[item.paidBy] += total;
     item.splitAmong.forEach((id) => {
@@ -49,12 +50,44 @@ function computeSettlements(items, people, taxPercent) {
 
 export default function SummarySection({ items, people, taxPercent = 0 }) {
   const settlements = useMemo(() => computeSettlements(items, people, taxPercent), [items, people, taxPercent]);
+  const [checkedSettlements, setCheckedSettlements] = useState(() => ({}));
+
+  const toggleSettlementCheck = (idx) => {
+    setCheckedSettlements((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  const sortedSettlements = useMemo(() => {
+    if (!settlements.length) return settlements;
+    const getName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
+    return [...settlements].sort((a, b) => {
+      const aIdx = settlements.indexOf(a);
+      const bIdx = settlements.indexOf(b);
+      const aChecked = checkedSettlements[aIdx] ?? false;
+      const bChecked = checkedSettlements[bIdx] ?? false;
+      if (aChecked !== bChecked) return aChecked ? 1 : -1;
+      return getName(a.from).localeCompare(getName(b.from));
+    });
+  }, [settlements, checkedSettlements, people]);
 
   const totals = useMemo(() => {
-    const subtotal = items.reduce((s, i) => s + i.amount, 0);
-    const grandTotal = calcTotalWithTax(subtotal, taxPercent);
-    const totalTax = grandTotal - subtotal;
-    return { subtotal, totalTax, grandTotal };
+    let subtotal = 0;
+    let globalTaxAmount = 0;
+    let customTaxAmount = 0;
+    items.forEach((item) => {
+      subtotal += item.amount;
+      if (item.useCustomTax) {
+        customTaxAmount += calcTotalWithTax(item.amount, item.customTaxPercent ?? 0) - item.amount;
+      } else {
+        globalTaxAmount += calcTotalWithTax(item.amount, taxPercent) - item.amount;
+      }
+    });
+    return {
+      subtotal,
+      globalTaxAmount,
+      customTaxAmount,
+      totalTax: globalTaxAmount + customTaxAmount,
+      grandTotal: subtotal + globalTaxAmount + customTaxAmount,
+    };
   }, [items, taxPercent]);
 
   const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
@@ -78,13 +111,22 @@ export default function SummarySection({ items, people, taxPercent = 0 }) {
           <div className="stat-label">Subtotal</div>
           <div className="stat-value">Rp {totals.subtotal.toLocaleString('id-ID')}</div>
         </div>
-        {totals.totalTax > 0 && (
+        {taxPercent > 0 && (
           <div className="stat-card">
             <div className="stat-label">
               <Percent size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />
-              Tax
+              Global Tax
             </div>
-            <div className="stat-value">Rp {totals.totalTax.toLocaleString('id-ID')}</div>
+            <div className="stat-value">Rp {totals.globalTaxAmount.toLocaleString('id-ID')}</div>
+          </div>
+        )}
+        {totals.customTaxAmount !== 0 && (
+          <div className="stat-card">
+            <div className="stat-label">
+              <Percent size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />
+              Other Tax
+            </div>
+            <div className="stat-value">Rp {totals.customTaxAmount.toLocaleString('id-ID')}</div>
           </div>
         )}
         <div className="stat-card" style={{ background: 'var(--primary-light)', borderColor: 'var(--primary)' }}>
@@ -93,29 +135,42 @@ export default function SummarySection({ items, people, taxPercent = 0 }) {
             Rp {totals.grandTotal.toLocaleString('id-ID')}
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-label">Settlements</div>
-          <div className="stat-value">{settlements.length}</div>
-        </div>
       </div>
 
-      {settlements.length > 0 ? (
-        <ul className="settlement-list">
-          {settlements.map((s, idx) => (
-            <li key={idx} className="settlement-item">
-              <span className="settlement-from">{getPersonName(s.from)}</span>
-              <ArrowRight size={16} className="settlement-arrow" />
-              <span className="settlement-to">{getPersonName(s.to)}</span>
-              <span className="settlement-amount">Rp {s.amount.toLocaleString('id-ID')}</span>
-            </li>
-          ))}
-        </ul>
-      ) : items.length > 0 ? (
-        <div className="settlement-settled">
-          <CheckCircle2 size={28} />
-          <span>All settled up!</span>
+      <div className="settlements-section">
+        <div className="settlements-header">
+          <ArrowRight size={16} /> Settlements {settlements.length > 0 && `(${settlements.length})`}
         </div>
-      ) : null}
+
+        {settlements.length > 0 ? (
+          <ul className="settlement-list">
+            {sortedSettlements.map((s, idx) => {
+              const originalIdx = settlements.indexOf(s);
+              const isChecked = checkedSettlements[originalIdx] ?? false;
+              return (
+                <li key={originalIdx} className={`settlement-item${isChecked ? ' checked' : ''}`}>
+                  <button
+                    className="settlement-check"
+                    onClick={() => toggleSettlementCheck(originalIdx)}
+                    title={isChecked ? 'Mark as pending' : 'Mark as settled'}
+                  >
+                    {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
+                  </button>
+                  <span className="settlement-from">{getPersonName(s.from)}</span>
+                  <ArrowRight size={14} className="settlement-arrow" />
+                  <span className="settlement-to">{getPersonName(s.to)}</span>
+                  <span className="settlement-amount">Rp {s.amount.toLocaleString('id-ID')}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : items.length > 0 ? (
+          <div className="settlement-settled">
+            <CheckCircle2 size={24} />
+            <span>All settled up!</span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

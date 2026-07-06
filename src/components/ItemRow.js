@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { Trash2, Pencil, Check, X, ReceiptText, Plus } from 'lucide-react';
 import PersonSelect from './PersonSelect';
 
-export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson }) {
+export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, globalTaxPercent = 0 }) {
   const [editing, setEditing] = useState(false);
   const [desc, setDesc] = useState(item.description);
   const [amount, setAmount] = useState(String(item.amount));
   const [paidBy, setPaidBy] = useState(item.paidBy);
   const [splitAmong, setSplitAmong] = useState([...item.splitAmong]);
+  const [useCustomTax, setUseCustomTax] = useState(item.useCustomTax ?? false);
+  const [customTaxPercent, setCustomTaxPercent] = useState(String(item.customTaxPercent ?? 0));
   const [newPersonName, setNewPersonName] = useState('');
+
+  const calcTaxAmount = (amt, pct) => amt * (pct || 0) / 100;
 
   const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
 
@@ -31,8 +35,17 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
 
   const save = () => {
     const amt = parseFloat(amount);
+    const taxPct = parseFloat(customTaxPercent) || 0;
     if (!desc.trim() || isNaN(amt) || amt <= 0 || !paidBy || splitAmong.length === 0) return;
-    onUpdate(item.id, { ...item, description: desc.trim(), amount: amt, paidBy, splitAmong });
+    onUpdate(item.id, {
+      ...item,
+      description: desc.trim(),
+      amount: amt,
+      paidBy,
+      splitAmong,
+      useCustomTax,
+      customTaxPercent: useCustomTax ? taxPct : 0,
+    });
     setEditing(false);
   };
 
@@ -41,6 +54,8 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
     setAmount(String(item.amount));
     setPaidBy(item.paidBy);
     setSplitAmong([...item.splitAmong]);
+    setUseCustomTax(item.useCustomTax ?? false);
+    setCustomTaxPercent(String(item.customTaxPercent ?? 0));
     setEditing(false);
   };
 
@@ -71,6 +86,32 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
               <div className="form-group" style={{ maxWidth: 110 }}>
                 <label>Amount</label>
                 <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={handleKey} min="0" step="100" />
+              </div>
+              {/* Custom tax checkbox + input */}
+              <div className="form-group" style={{ maxWidth: 130 }}>
+                <label>Override tax</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={useCustomTax}
+                    onChange={(e) => setUseCustomTax(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: useCustomTax ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                    <input
+                      type="number"
+                      value={customTaxPercent}
+                      onChange={(e) => setCustomTaxPercent(e.target.value)}
+                      onKeyDown={handleKey}
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      disabled={!useCustomTax}
+                      style={{ width: 48, border: 'none', borderRadius: 0, textAlign: 'center', padding: '7px 0', background: useCustomTax ? 'white' : 'var(--gray-50)' }}
+                    />
+                    <span style={{ padding: '0 6px', fontSize: '0.78rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -113,6 +154,9 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
             <div className="item-desc">{item.description}</div>
             <div className="item-meta">
               {getPersonName(item.paidBy)} paid &middot; {splitLabel}
+              {(item.useCustomTax && item.customTaxPercent === 0) && ` · No tax`}
+              {(item.useCustomTax && item.customTaxPercent > 0) && ` · ${item.customTaxPercent}% tax`}
+              {(!item.useCustomTax && globalTaxPercent > 0) && ` · ${globalTaxPercent}% tax`}
             </div>
           </>
         )}
@@ -121,6 +165,12 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
       {!editing && (
         <div className="item-amount" style={{ textAlign: 'right' }}>
           <div>Rp {item.amount.toLocaleString('id-ID')}</div>
+          {(item.useCustomTax && item.customTaxPercent > 0) && (
+            <div className="item-tax-note">tax +{calcTaxAmount(item.amount, item.customTaxPercent).toLocaleString('id-ID')}</div>
+          )}
+          {(!item.useCustomTax && globalTaxPercent > 0) && (
+            <div className="item-tax-note">tax +{calcTaxAmount(item.amount, globalTaxPercent).toLocaleString('id-ID')}</div>
+          )}
         </div>
       )}
 

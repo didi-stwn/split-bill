@@ -3,11 +3,13 @@ import { Package, Plus, Percent } from 'lucide-react';
 import ItemRow from './ItemRow';
 import PersonSelect from './PersonSelect';
 
-export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, taxPercent, onTaxPercentChange }) {
+export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, taxPercent, onTaxPercentChange, globalTaxPercent }) {
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [splitAmong, setSplitAmong] = useState([]);
+  const [useCustomTax, setUseCustomTax] = useState(false);
+  const [customTaxPercent, setCustomTaxPercent] = useState('');
   const [newPersonName, setNewPersonName] = useState('');
 
   const togglePerson = (id) => {
@@ -38,19 +40,37 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!desc.trim() || isNaN(amt) || amt <= 0 || !paidBy || splitAmong.length === 0) return;
-    onAdd({ description: desc.trim(), amount: amt, paidBy, splitAmong });
+    onAdd({
+      description: desc.trim(),
+      amount: amt,
+      paidBy,
+      splitAmong,
+      useCustomTax,
+      customTaxPercent: useCustomTax ? (parseFloat(customTaxPercent) || 0) : 0,
+    });
     setDesc('');
     setAmount('');
     setPaidBy('');
     setSplitAmong([]);
+    setUseCustomTax(false);
+    setCustomTaxPercent('');
   };
 
   const isValid = desc.trim() && parseFloat(amount) > 0 && paidBy && splitAmong.length > 0;
 
   const calcTotalWithTax = (amt, pct) => amt * (1 + (pct || 0) / 100);
   const subtotal = items.reduce((s, i) => s + i.amount, 0);
-  const taxAmount = calcTotalWithTax(subtotal, taxPercent) - subtotal;
-  const grandTotal = subtotal + taxAmount;
+  let globalTaxAmount = 0;
+  let customTaxAmount = 0;
+  items.forEach((item) => {
+    if (item.useCustomTax) {
+      customTaxAmount += calcTotalWithTax(item.amount, item.customTaxPercent ?? 0) - item.amount;
+    } else {
+      globalTaxAmount += calcTotalWithTax(item.amount, taxPercent) - item.amount;
+    }
+  });
+  const totalTaxAmount = globalTaxAmount + customTaxAmount;
+  const grandTotal = subtotal + totalTaxAmount;
 
   return (
     <div className="card">
@@ -90,6 +110,31 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
+            </div>
+            {/* Custom tax checkbox + input */}
+            <div className="form-group" style={{ maxWidth: 130 }}>
+              <label>Override tax</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={useCustomTax}
+                  onChange={(e) => setUseCustomTax(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: useCustomTax ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                  <input
+                    type="number"
+                    value={customTaxPercent}
+                    onChange={(e) => setCustomTaxPercent(e.target.value)}
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    disabled={!useCustomTax}
+                    style={{ width: 48, border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: useCustomTax ? 'white' : 'var(--gray-50)' }}
+                  />
+                  <span style={{ padding: '0 6px', fontSize: '0.78rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -184,6 +229,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
               onAddPerson={onAddPerson}
               onEditPerson={onEditPerson}
               onRemovePerson={onRemovePerson}
+              globalTaxPercent={globalTaxPercent}
             />
           ))}
 
@@ -197,7 +243,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
               <span>Rp {subtotal.toLocaleString('id-ID')}</span>
             </div>
             <div className="tax-row">
-              <span>Tax</span>
+              <span>Global Tax ({taxPercent}%)</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden' }}>
                   <input
@@ -212,9 +258,15 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                   />
                   <span style={{ padding: '0 6px', fontSize: '0.82rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
                 </div>
-                <span>Rp {taxAmount.toLocaleString('id-ID')}</span>
+                <span>Rp {globalTaxAmount.toLocaleString('id-ID')}</span>
               </div>
             </div>
+            {customTaxAmount !== 0 && (
+              <div className="tax-row">
+                <span>Other Tax (custom overrides)</span>
+                <span>Rp {customTaxAmount.toLocaleString('id-ID')}</span>
+              </div>
+            )}
             <div className="tax-row tax-total">
               <span>Grand Total</span>
               <span>Rp {grandTotal.toLocaleString('id-ID')}</span>
