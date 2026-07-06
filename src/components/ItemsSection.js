@@ -208,7 +208,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                     min="0"
                     max="100"
                     step="0.5"
-                    style={{ width: 50, border: 'none', borderRadius: 0, textAlign: 'center' }}
+                    style={{ width: 50, border: 'none', borderRadius: 0, textAlign: 'center', padding: "9px 0px" }}
                   />
                   <span style={{ padding: '0 6px', fontSize: '0.82rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
                 </div>
