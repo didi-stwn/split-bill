@@ -1,0 +1,17 @@
+{
+  "short_name": "SplitBill",
+  "name": "SplitBill – Split Expenses Fairly",
+  "description": "Scan receipts with OCR, assign items to people, and see who owes what.",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#2563eb",
+  "background_color": "#f8fafc"
+}
