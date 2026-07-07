@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Check, X, ChevronDown, Users } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
-export default function PersonSelect({ value, onChange, people, onAddPerson, onEditPerson, onRemovePerson, placeholder = '— Select —' }) {
+export default function PersonSelect({ value, onChange, people, onAddPerson, onEditPerson, onRemovePerson, placeholder = 'Select' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');

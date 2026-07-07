@@ -431,6 +431,7 @@ select {
 .add-item-summary {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 14px;
   font-size: 0.88rem;
@@ -1072,9 +1073,38 @@ select {
 .bill-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  row-gap: 8px;
+  column-gap: 20px;
   margin: 0 -14px 12px;
   padding: 10px 14px;
+}
+
+/* On larger screens, arrange Paid By, Override Bill Tax, and Discount in a flex row */
+
+
+.bill-paidby-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+@media (min-width: 640px) {
+  .bill-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .bill-title-row {
+    flex: 1 1 100%;
+  }
+  .bill-meta-row {
+    flex: 1 1 30%;
+    min-width: 0;
+  }
+  .bill-paidby-label {
+    min-width: unset;
+  }
 }
 
 .bill-title-row {
@@ -1114,16 +1144,11 @@ select {
   gap: 8px;
 }
 
-.bill-paidby-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--gray-500);
-  white-space: nowrap;
-}
-
 .bill-meta-row .person-select {
   flex: 1;
-  max-width: 200px;
+  width: 100%;
+  /* min-width: 100px; */
+  /* max-width: 200px; */
 }
 
 .bill-actions {
@@ -1156,6 +1181,14 @@ select {
   font-size: 0.9rem;
   padding: 4px 0;
   color: var(--gray-600);
+}
+
+.tax-row.tax-row--red {
+  color: var(--danger);
+}
+
+.tax-row.discount-row {
+  color: #16a34a;
 }
 
 .tax-row.tax-total {

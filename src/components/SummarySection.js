@@ -1,13 +1,37 @@
 import { useMemo, useState } from 'react';
-import { DollarSign, ArrowRight, CheckCircle2, Percent, CheckSquare, Square } from 'lucide-react';
+import { DollarSign, ArrowRight, CheckCircle2, Percent, CheckSquare, Square, Tag } from 'lucide-react';
 
 function calcTotalWithTax(amount, taxPercent) {
   return amount * (1 + (taxPercent || 0) / 100);
 }
 
+// Apply tax on the original amount, then apply discount separately (fixed amount, split proportionally)
+function applyDiscountAndTax(itemAmount, bill, effectiveTax, billSubtotal) {
+  // Tax is always calculated on the original item amount (not discounted)
+  const totalWithTax = calcTotalWithTax(itemAmount, effectiveTax);
+  const taxAmount = totalWithTax - itemAmount;
+  // Discount is a separate reduction (fixed amount, split proportionally)
+  let discountAmount = 0;
+  if (bill?.useBillDiscount && (bill.billDiscountAmount ?? 0) > 0 && billSubtotal > 0) {
+    const ratio = itemAmount / billSubtotal;
+    discountAmount = Math.min(ratio * bill.billDiscountAmount, itemAmount);
+  }
+  // Total = original + tax - discount
+  const total = itemAmount + taxAmount - discountAmount;
+  return { originalAmount: itemAmount, taxAmount, discountAmount, total };
+}
+
 function computeSettlements(items, people, globalTaxPercent, bills) {
   const balances = {};
   people.forEach((p) => (balances[p.id] = 0));
+
+  // Pre-compute bill subtotals for proportional discount splitting
+  const billSubtotals = {};
+  items.forEach((item) => {
+    if (item.billId) {
+      billSubtotals[item.billId] = (billSubtotals[item.billId] || 0) + item.amount;
+    }
+  });
 
   items.forEach((item) => {
     // Tax priority: Item override > Bill override > Global
@@ -20,7 +44,7 @@ function computeSettlements(items, people, globalTaxPercent, bills) {
     } else {
       effectiveTax = globalTaxPercent;
     }
-    const total = calcTotalWithTax(item.amount, effectiveTax);
+    const { total } = applyDiscountAndTax(item.amount, bill, effectiveTax, billSubtotals[item.billId] || 0);
     const share = total / item.splitAmong.length;
     // Effective paidBy: item override → bill's paidBy → fallback
     const effectivePaidBy = item.paidBy || bill?.paidBy || '';
@@ -64,13 +88,20 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
   const settlements = useMemo(() => computeSettlements(items, people, taxPercent, bills), [items, people, taxPercent, bills]);
   const [checkedSettlements, setCheckedSettlements] = useState(() => ({}));
 
-
   const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
+
 
   // Compute per-person balances for the detail breakdown
   const balances = useMemo(() => {
     const bal = {};
     people.forEach((p) => (bal[p.id] = 0));
+    // Pre-compute bill subtotals for proportional discount splitting
+    const billSubtotals = {};
+    items.forEach((item) => {
+      if (item.billId) {
+        billSubtotals[item.billId] = (billSubtotals[item.billId] || 0) + item.amount;
+      }
+    });
     items.forEach((item) => {
       const bill = bills?.find((b) => b.id === item.billId);
       let effectiveTax;
@@ -81,7 +112,7 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
       } else {
         effectiveTax = taxPercent;
       }
-      const total = calcTotalWithTax(item.amount, effectiveTax);
+      const { total } = applyDiscountAndTax(item.amount, bill, effectiveTax, billSubtotals[item.billId] || 0);
       const share = total / item.splitAmong.length;
       const effectivePaidBy = item.paidBy || bill?.paidBy || '';
       if (effectivePaidBy) {
@@ -120,17 +151,33 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
     let globalTaxAmount = 0;
     let customTaxAmount = 0;
     let billTaxAmount = 0;
+    let discountAmount = 0;
+    // Pre-compute bill subtotals for proportional discount splitting
+    const billSubtotals = {};
+    items.forEach((item) => {
+      if (item.billId) {
+        billSubtotals[item.billId] = (billSubtotals[item.billId] || 0) + item.amount;
+      }
+    });
     items.forEach((item) => {
       subtotal += item.amount;
+      const bill = bills.find((b) => b.id === item.billId);
+      let effectiveTax;
       if (item.useCustomTax) {
-        customTaxAmount += calcTotalWithTax(item.amount, item.customTaxPercent ?? 0) - item.amount;
+        effectiveTax = item.customTaxPercent ?? 0;
+      } else if (bill?.useBillTax) {
+        effectiveTax = bill.billTaxPercent ?? 0;
       } else {
-        const bill = bills.find((b) => b.id === item.billId);
-        if (bill?.useBillTax && (bill.billTaxPercent ?? 0) > 0) {
-          billTaxAmount += calcTotalWithTax(item.amount, bill.billTaxPercent) - item.amount;
-        } else {
-          globalTaxAmount += calcTotalWithTax(item.amount, taxPercent) - item.amount;
-        }
+        effectiveTax = taxPercent;
+      }
+      const { taxAmount, discountAmount: itemDisc } = applyDiscountAndTax(item.amount, bill, effectiveTax, billSubtotals[item.billId] || 0);
+      discountAmount += itemDisc;
+      if (item.useCustomTax) {
+        customTaxAmount += taxAmount;
+      } else if (bill?.useBillTax && (bill.billTaxPercent ?? 0) > 0) {
+        billTaxAmount += taxAmount;
+      } else {
+        globalTaxAmount += taxAmount;
       }
     });
     return {
@@ -139,7 +186,8 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
       customTaxAmount,
       billTaxAmount,
       totalTax: globalTaxAmount + customTaxAmount + billTaxAmount,
-      grandTotal: subtotal + globalTaxAmount + customTaxAmount + billTaxAmount,
+      discountAmount,
+      grandTotal: subtotal + globalTaxAmount + customTaxAmount + billTaxAmount - discountAmount,
     };
   }, [items, taxPercent, bills]);
 
@@ -162,15 +210,22 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
           <div className="stat-label">Subtotal</div>
           <div className="stat-value">Rp {totals.subtotal.toLocaleString('id-ID')}</div>
         </div>
-        {totals.totalTax > 0 && (
-          <div className="stat-card">
-            <div className="stat-label">
-              <Percent size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />
-              Tax
-            </div>
-            <div className="stat-value">Rp {totals.totalTax.toLocaleString('id-ID')}</div>
+        <div className="stat-card" style={{ background: '#fef2f2', borderColor: 'var(--danger)' }}>
+          <div className="stat-label">
+            <Percent size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />
+            Tax
           </div>
-        )}
+          <div className="stat-value" style={{ color: 'var(--danger)' }}>Rp {totals.totalTax.toLocaleString('id-ID')}</div>
+        </div>
+        <div className="stat-card" style={{ background: '#f0fdf4', borderColor: '#22c55e' }}>
+          <div className="stat-label">
+            <Tag size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />
+            Discount
+          </div>
+          <div className="stat-value" style={{ color: '#16a34a' }}>
+            -Rp {totals.discountAmount.toLocaleString('id-ID')}
+          </div>
+        </div>
         <div className="stat-card" style={{ background: 'var(--primary-light)', borderColor: 'var(--primary)' }}>
           <div className="stat-label">Total</div>
           <div className="stat-value" style={{ color: 'var(--primary)' }}>

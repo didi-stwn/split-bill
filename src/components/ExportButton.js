@@ -31,10 +31,12 @@ export default function ExportButton({ itemsSectionRef, summarySectionRef }) {
           sel.parentNode?.replaceChild(textSpan, sel);
         });
 
-        // 2. Remove disabled Override Bill Tax rows (checkbox unchecked)
+        // 2. Remove disabled Override Bill Tax and Discount rows (checkbox unchecked)
         clone.querySelectorAll('.bill-meta-row').forEach((row) => {
           const label = row.querySelector('.bill-paidby-label');
-          if (label && label.textContent?.trim() === 'Override Bill Tax') {
+          if (!label) return;
+          const labelText = label.textContent?.trim();
+          if (labelText === 'Bill Tax' || labelText === 'Discount') {
             const checkbox = row.querySelector('input[type="checkbox"]');
             if (!checkbox || !checkbox.checked) {
               row.remove();
@@ -46,10 +48,9 @@ export default function ExportButton({ itemsSectionRef, summarySectionRef }) {
         //    the rows that contain Override Bill Tax if enabled)
         clone.querySelectorAll('button, details, .quick-person-row, [type="submit"], [type="checkbox"]').forEach((el) => el.remove());
 
-        // 4. Replace remaining inputs with text spans (only bill name inputs remain)
+        // 4. Replace remaining inputs with text spans
         clone.querySelectorAll('input').forEach((el) => {
           const span = document.createElement('span');
-          // For bill name inputs, keep the value; for any stray inputs, use value
           span.textContent = el.value || '';
           if (el.className === 'bill-name-input') {
             span.style.cssText = 'font-size:0.95rem;font-weight:600;color:#1e293b';
@@ -59,8 +60,32 @@ export default function ExportButton({ itemsSectionRef, summarySectionRef }) {
           el.parentNode?.replaceChild(span, el);
         });
 
-        // 5. Clean up input wrapper divs (containing a % span child):
-        //    - In .tax-row (global tax): remove entirely so only label + amount remain
+        // 5. For Override Bill Tax / Discount rows: replace the entire border-wrapper div
+        //    (which looks like an input box) with a clean text value like "20%" or "30,000"
+        clone.querySelectorAll('.bill-meta-row').forEach((row) => {
+          const label = row.querySelector('.bill-paidby-label');
+          if (!label) return;
+          const labelText = label.textContent?.trim();
+          if (labelText === 'Bill Tax' || labelText === 'Discount') {
+            // Replace the border-wrapper div (contains number input value + %/Rp suffix)
+            row.querySelectorAll('[class=""], div:not([class])').forEach((wrapper) => {
+              // Only match the inline border wrapper (has border style)
+              const style = wrapper.getAttribute('style');
+              if (!style || !style.includes('border')) return;
+              const kids = wrapper.children;
+              if (kids.length === 0) return;
+              const firstText = kids[0]?.textContent?.trim() || '0';
+              const suffix = kids.length >= 2 ? kids[kids.length - 1]?.textContent?.trim() || '' : '';
+              const valueText = firstText + suffix;
+              const valueSpan = document.createElement('span');
+              valueSpan.textContent = valueText;
+              valueSpan.style.cssText = 'font-size:0.85rem;font-weight:600;color:#334155';
+              wrapper.parentNode?.replaceChild(valueSpan, wrapper);
+            });
+          }
+        });
+
+        // 6. In global tax rows (not bill-meta-rows), remove the input wrapper div
         clone.querySelectorAll('.tax-row').forEach((row) => {
           row.querySelectorAll('div').forEach((wrapper) => {
             const kids = wrapper.children;
@@ -71,27 +96,6 @@ export default function ExportButton({ itemsSectionRef, summarySectionRef }) {
               }
             }
           });
-        });
-        //    - In .bill-meta-row (Override Bill Tax): replace the border-wrapper div with
-        //      a clean text span showing e.g. "20%"
-        clone.querySelectorAll('.bill-meta-row').forEach((row) => {
-          const label = row.querySelector('.bill-paidby-label');
-          if (label && label.textContent?.trim() === 'Override Bill Tax') {
-            // Find the border wrapper div (contains the number + % span)
-            row.querySelectorAll('div[style*="border"]').forEach((wrapper) => {
-              const kids = wrapper.children;
-              if (kids.length >= 2) {
-                const last = kids[kids.length - 1];
-                if (last?.textContent?.trim() === '%') {
-                  const firstText = kids[0]?.textContent?.trim() || '0';
-                  const valueSpan = document.createElement('span');
-                  valueSpan.textContent = firstText + '%';
-                  valueSpan.style.cssText = 'font-size:0.85rem;font-weight:600;color:#334155';
-                  wrapper.parentNode?.replaceChild(valueSpan, wrapper);
-                }
-              }
-            });
-          }
         });
 
         wrapper.appendChild(clone);

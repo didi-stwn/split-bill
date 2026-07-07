@@ -82,9 +82,9 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
   const calcTotalWithTax = (amt, pct) => amt * (1 + (pct || 0) / 100);
   const subtotal = items.reduce((s, i) => s + i.amount, 0);
   let globalTaxAmount = 0;
-  // Per-bill tax tracking: { billId: { billTax: 0, customTax: 0 } }
+  // Per-bill tracking: { billId: { billTax: 0, customTax: 0 } }
   const billTaxDetail = {};
-  bills.forEach((b) => { billTaxDetail[b.id] = { billTax: 0, customTax: 0 }; });
+  bills.forEach((b) => { billTaxDetail[b.id] = { billTax: 0, customTax: 0, discount: 0 }; });
   items.forEach((item) => {
     const bill = bills.find((b) => b.id === item.billId);
     if (item.useCustomTax) {
@@ -98,10 +98,18 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
     } else {
       globalTaxAmount += calcTotalWithTax(item.amount, taxPercent) - item.amount;
     }
+    // Track discount per bill (fixed amount applied to bill, not per-item)
+  });
+  // Discount is stored as a fixed amount per bill
+  bills.forEach((bill) => {
+    if (bill.useBillDiscount && (bill.billDiscountAmount ?? 0) > 0) {
+      billTaxDetail[bill.id].discount = bill.billDiscountAmount;
+    }
   });
   const billTaxTotal = bills.reduce((s, b) => s + billTaxDetail[b.id].billTax + billTaxDetail[b.id].customTax, 0);
+  const billDiscountTotal = bills.reduce((s, b) => s + billTaxDetail[b.id].discount, 0);
   const totalTaxAmount = globalTaxAmount + billTaxTotal;
-  const grandTotal = subtotal + totalTaxAmount;
+  const grandTotal = subtotal + totalTaxAmount - billDiscountTotal;
 
   return (
     <div className="card">
@@ -141,18 +149,6 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                   placeholder="Bill name"
                 />
                 <span className="bill-total">Rp {billTotal.toLocaleString('id-ID')}</span>
-              </div>
-
-              <div className="bill-meta-row">
-                <label className="bill-paidby-label">Paid by</label>
-                <PersonSelect
-                  value={bill.paidBy}
-                  onChange={(paidBy) => onUpdateBill(bill.id, { paidBy })}
-                  people={people}
-                  onAddPerson={onAddPerson}
-                  onEditPerson={onEditPerson}
-                  onRemovePerson={onRemovePerson}
-                />
                 <div className="bill-actions">
                   {bills.length > 1 && (
                     <button
@@ -166,17 +162,29 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                 </div>
               </div>
 
+              <div className="bill-meta-row">
+                <label className="bill-paidby-label">Paid by</label>
+                <PersonSelect
+                  value={bill.paidBy}
+                  onChange={(paidBy) => onUpdateBill(bill.id, { paidBy })}
+                  people={people}
+                  onAddPerson={onAddPerson}
+                  onEditPerson={onEditPerson}
+                  onRemovePerson={onRemovePerson}
+                />
+              </div>
+
               {/* Bill-level tax override */}
               <div className="bill-meta-row">
-                <label className="bill-paidby-label">Override Bill Tax</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                <label className="bill-paidby-label">Bill Tax</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, width:"100%" }}>
                   <input
                     type="checkbox"
                     checked={bill.useBillTax ?? false}
                     onChange={(e) => onUpdateBill(bill.id, { useBillTax: e.target.checked })}
                     style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
                   />
-                  <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillTax ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                  <div style={{ width:"100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillTax ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
                     <input
                       type="number"
                       value={bill.billTaxPercent ?? 0}
@@ -185,9 +193,33 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                       max="100"
                       step="0.5"
                       disabled={!bill.useBillTax}
-                      style={{ width: 48, border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: (bill.useBillTax ?? false) ? 'white' : 'var(--gray-50)' }}
+                      style={{ width: "100%", border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: (bill.useBillTax ?? false) ? 'white' : 'var(--gray-50)' }}
                     />
                     <span style={{ padding: '0 6px', fontSize: '0.78rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bill-level discount (fixed Rp amount) */}
+              <div className="bill-meta-row">
+                <label className="bill-paidby-label">Discount</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, width:"100%" }}>
+                  <input
+                    type="checkbox"
+                    checked={bill.useBillDiscount ?? false}
+                    onChange={(e) => onUpdateBill(bill.id, { useBillDiscount: e.target.checked })}
+                    style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                  />
+                  <div style={{ width:"100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillDiscount ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                    <input
+                      type="number"
+                      value={bill.billDiscountAmount ?? 0}
+                      onChange={(e) => onUpdateBill(bill.id, { billDiscountAmount: parseFloat(e.target.value) || 0 })}
+                      min="0"
+                      step="100"
+                      disabled={!bill.useBillDiscount}
+                      style={{ width: "100%", border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: (bill.useBillDiscount ?? false) ? 'white' : 'var(--gray-50)' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -247,7 +279,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                         type="number"
                         placeholder="0"
                         min="0"
-                        step="100"
+                        step="1"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                       />
@@ -371,16 +403,16 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
         <Plus size={16} /> Add Bill
       </button>
 
-      {/* ── Global Tax Section ── */}
+      {/* ── Global Tax & Discount Section ── */}
       <div className="tax-section">
         <div className="tax-header">
-          <Percent size={16} /> Tax
+          <Percent size={16} /> Tax & Discount
         </div>
         <div className="tax-row">
           <span>Subtotal</span>
           <span>Rp {subtotal.toLocaleString('id-ID')}</span>
         </div>
-        <div className="tax-row">
+        <div className="tax-row tax-row--red">
           <span>Global Tax ({taxPercent}%)</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden' }}>
@@ -403,20 +435,27 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
           const detail = billTaxDetail[bill.id];
           const showBill = detail.billTax !== 0;
           const showCustom = detail.customTax !== 0;
-          if (!showBill && !showCustom) return null;
+          const showDiscount = detail.discount !== 0;
+          if (!showBill && !showCustom && !showDiscount) return null;
           const pct = bill.billTaxPercent ?? 0;
           return (
             <div key={bill.id}>
               {showBill && (
-                <div className="tax-row">
+                <div className="tax-row tax-row--red">
                   <span>{bill.name} Tax ({pct}%)</span>
                   <span>Rp {detail.billTax.toLocaleString('id-ID')}</span>
                 </div>
               )}
               {showCustom && (
-                <div className="tax-row">
+                <div className="tax-row tax-row--red">
                   <span>Other {bill.name} Tax</span>
                   <span>Rp {detail.customTax.toLocaleString('id-ID')}</span>
+                </div>
+              )}
+              {showDiscount && (
+                <div className="tax-row discount-row">
+                  <span>Discount {bill.name}</span>
+                  <span>-Rp {detail.discount.toLocaleString('id-ID')}</span>
                 </div>
               )}
             </div>

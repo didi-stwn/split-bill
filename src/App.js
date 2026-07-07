@@ -7,7 +7,7 @@ import OcrScanner from './components/OcrScanner';
 import SummarySection from './components/SummarySection';
 
 function createBill(name, paidBy = '') {
-  return { id: crypto.randomUUID(), name, paidBy, useBillTax: false, billTaxPercent: 0 };
+  return { id: crypto.randomUUID(), name, paidBy, useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 };
 }
 
 export default function App() {
@@ -50,6 +50,8 @@ export default function App() {
         paidBy: billArg.paidBy || '',
         useBillTax: billArg.useBillTax ?? false,
         billTaxPercent: billArg.billTaxPercent ?? 0,
+        useBillDiscount: billArg.useBillDiscount ?? false,
+        billDiscountAmount: billArg.billDiscountAmount ?? 0,
       }]);
     } else {
       const num = bills.length + 1;

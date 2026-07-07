@@ -90,7 +90,7 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
               </div>
               <div className="form-group" style={{ maxWidth: 110 }}>
                 <label>Amount</label>
-                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={handleKey} min="0" step="100" />
+                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={handleKey} min="0" step="1" />
               </div>
             </div>
 
