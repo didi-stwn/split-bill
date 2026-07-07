@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { DollarSign, ArrowRight, CheckCircle2, Percent, CheckSquare, Square, Tag } from 'lucide-react';
 
-function calcTotalWithTax(amount, taxPercent) {
+export function calcTotalWithTax(amount, taxPercent) {
   return amount * (1 + (taxPercent || 0) / 100);
 }
 
 // Apply tax on the original amount, then apply discount separately (fixed amount, split proportionally)
-function applyDiscountAndTax(itemAmount, bill, effectiveTax, billSubtotal) {
+export function applyDiscountAndTax(itemAmount, bill, effectiveTax, billSubtotal) {
   // Tax is always calculated on the original item amount (not discounted)
   const totalWithTax = calcTotalWithTax(itemAmount, effectiveTax);
   const taxAmount = totalWithTax - itemAmount;
@@ -21,7 +21,7 @@ function applyDiscountAndTax(itemAmount, bill, effectiveTax, billSubtotal) {
   return { originalAmount: itemAmount, taxAmount, discountAmount, total };
 }
 
-function computeSettlements(items, people, globalTaxPercent, bills) {
+export function computeSettlements(items, people, globalTaxPercent, bills) {
   const balances = {};
   people.forEach((p) => (balances[p.id] = 0));
 
