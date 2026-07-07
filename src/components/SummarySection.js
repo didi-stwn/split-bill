@@ -64,6 +64,40 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
   const settlements = useMemo(() => computeSettlements(items, people, taxPercent, bills), [items, people, taxPercent, bills]);
   const [checkedSettlements, setCheckedSettlements] = useState(() => ({}));
 
+
+  const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
+
+  // Compute per-person balances for the detail breakdown
+  const balances = useMemo(() => {
+    const bal = {};
+    people.forEach((p) => (bal[p.id] = 0));
+    items.forEach((item) => {
+      const bill = bills?.find((b) => b.id === item.billId);
+      let effectiveTax;
+      if (item.useCustomTax) {
+        effectiveTax = item.customTaxPercent ?? 0;
+      } else if (bill?.useBillTax) {
+        effectiveTax = bill.billTaxPercent ?? 0;
+      } else {
+        effectiveTax = taxPercent;
+      }
+      const total = calcTotalWithTax(item.amount, effectiveTax);
+      const share = total / item.splitAmong.length;
+      const effectivePaidBy = item.paidBy || bill?.paidBy || '';
+      if (effectivePaidBy) {
+        bal[effectivePaidBy] = (bal[effectivePaidBy] || 0) + total;
+      }
+      item.splitAmong.forEach((id) => {
+        bal[id] -= share;
+      });
+    });
+    return Object.entries(bal).map(([id, balance]) => ({
+      id,
+      name: getPersonName(id),
+      balance: Math.round(balance * 100) / 100,
+    })).sort((a, b) => b.balance - a.balance);
+  }, [items, people, taxPercent, bills]);
+
   const toggleSettlementCheck = (idx) => {
     setCheckedSettlements((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
@@ -108,8 +142,6 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
       grandTotal: subtotal + globalTaxAmount + customTaxAmount + billTaxAmount,
     };
   }, [items, taxPercent, bills]);
-
-  const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
 
   return (
     <div className="card">
@@ -180,6 +212,35 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
             <span>All settled up!</span>
           </div>
         ) : null}
+
+        {/* ── Balance Detail ── */}
+        {
+          balances.filter(b => b.balance !== 0).length > 0 && (
+            <div className="balance-section">
+              <div className="settlements-header">
+                <DollarSign size={16} /> Balance Detail
+              </div>
+              <div className="balance-list">
+                {balances.filter(b => b.balance !== 0).map((b) => {
+                  const isPositive = b.balance > 0;
+                  const isNegative = b.balance < 0;
+                  return (
+                    <div key={b.id} className={`balance-item ${isPositive ? 'positive' : isNegative ? 'negative' : 'zero'}`}>
+                      <span className="balance-name">{b.name}</span>
+                      <span className="balance-value">
+                        {isPositive ? '+' : ''}Rp {Math.abs(b.balance).toLocaleString('id-ID')}
+                      </span>
+                      <span className="balance-label">
+                        {isPositive ? 'gets back' : isNegative ? 'owes' : 'settled'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )
+        }
+
       </div>
     </div>
   );

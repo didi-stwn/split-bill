@@ -866,6 +866,71 @@ select {
   margin-top: 2px;
 }
 
+/* ===== Balance Detail ===== */
+.balance-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1.5px solid var(--gray-200);
+}
+
+.balance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.balance-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+}
+
+.balance-item.positive {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.balance-item.negative {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.balance-item.zero {
+  border-color: var(--gray-200);
+  background: var(--gray-50);
+  opacity: 0.6;
+}
+
+.balance-name {
+  font-weight: 600;
+  color: var(--gray-800);
+  flex: 1;
+}
+
+.balance-value {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.balance-item.positive .balance-value {
+  color: #16a34a;
+}
+
+.balance-item.negative .balance-value {
+  color: #dc2626;
+}
+
+.balance-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+/* ===== Settlements ===== */
 .settlements-section {
   margin-top: 24px;
   padding-top: 16px;
