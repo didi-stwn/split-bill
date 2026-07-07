@@ -5,15 +5,27 @@ function calcTotalWithTax(amount, taxPercent) {
   return amount * (1 + (taxPercent || 0) / 100);
 }
 
-function computeSettlements(items, people, globalTaxPercent) {
+function computeSettlements(items, people, globalTaxPercent, bills) {
   const balances = {};
   people.forEach((p) => (balances[p.id] = 0));
 
   items.forEach((item) => {
-    const effectiveTax = item.useCustomTax ? (item.customTaxPercent ?? 0) : globalTaxPercent;
+    // Tax priority: Item override > Bill override > Global
+    const bill = bills?.find((b) => b.id === item.billId);
+    let effectiveTax;
+    if (item.useCustomTax) {
+      effectiveTax = item.customTaxPercent ?? 0;
+    } else if (bill?.useBillTax) {
+      effectiveTax = bill.billTaxPercent ?? 0;
+    } else {
+      effectiveTax = globalTaxPercent;
+    }
     const total = calcTotalWithTax(item.amount, effectiveTax);
     const share = total / item.splitAmong.length;
-    balances[item.paidBy] += total;
+    // Effective paidBy: item override → bill's paidBy → fallback
+    const effectivePaidBy = item.paidBy || bill?.paidBy || '';
+    if (!effectivePaidBy) return; // skip items with no payer
+    balances[effectivePaidBy] = (balances[effectivePaidBy] || 0) + total;
     item.splitAmong.forEach((id) => {
       balances[id] -= share;
     });
@@ -48,8 +60,8 @@ function computeSettlements(items, people, globalTaxPercent) {
   return settlements;
 }
 
-export default function SummarySection({ items, people, taxPercent = 0 }) {
-  const settlements = useMemo(() => computeSettlements(items, people, taxPercent), [items, people, taxPercent]);
+export default function SummarySection({ items, people, taxPercent = 0, bills = [] }) {
+  const settlements = useMemo(() => computeSettlements(items, people, taxPercent, bills), [items, people, taxPercent, bills]);
   const [checkedSettlements, setCheckedSettlements] = useState(() => ({}));
 
   const toggleSettlementCheck = (idx) => {
@@ -73,22 +85,29 @@ export default function SummarySection({ items, people, taxPercent = 0 }) {
     let subtotal = 0;
     let globalTaxAmount = 0;
     let customTaxAmount = 0;
+    let billTaxAmount = 0;
     items.forEach((item) => {
       subtotal += item.amount;
       if (item.useCustomTax) {
         customTaxAmount += calcTotalWithTax(item.amount, item.customTaxPercent ?? 0) - item.amount;
       } else {
-        globalTaxAmount += calcTotalWithTax(item.amount, taxPercent) - item.amount;
+        const bill = bills.find((b) => b.id === item.billId);
+        if (bill?.useBillTax && (bill.billTaxPercent ?? 0) > 0) {
+          billTaxAmount += calcTotalWithTax(item.amount, bill.billTaxPercent) - item.amount;
+        } else {
+          globalTaxAmount += calcTotalWithTax(item.amount, taxPercent) - item.amount;
+        }
       }
     });
     return {
       subtotal,
       globalTaxAmount,
       customTaxAmount,
-      totalTax: globalTaxAmount + customTaxAmount,
-      grandTotal: subtotal + globalTaxAmount + customTaxAmount,
+      billTaxAmount,
+      totalTax: globalTaxAmount + customTaxAmount + billTaxAmount,
+      grandTotal: subtotal + globalTaxAmount + customTaxAmount + billTaxAmount,
     };
-  }, [items, taxPercent]);
+  }, [items, taxPercent, bills]);
 
   const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
 
@@ -111,22 +130,13 @@ export default function SummarySection({ items, people, taxPercent = 0 }) {
           <div className="stat-label">Subtotal</div>
           <div className="stat-value">Rp {totals.subtotal.toLocaleString('id-ID')}</div>
         </div>
-        {taxPercent > 0 && (
+        {totals.totalTax > 0 && (
           <div className="stat-card">
             <div className="stat-label">
               <Percent size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />
-              Global Tax
+              Tax
             </div>
-            <div className="stat-value">Rp {totals.globalTaxAmount.toLocaleString('id-ID')}</div>
-          </div>
-        )}
-        {totals.customTaxAmount !== 0 && (
-          <div className="stat-card">
-            <div className="stat-label">
-              <Percent size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />
-              Other Tax
-            </div>
-            <div className="stat-value">Rp {totals.customTaxAmount.toLocaleString('id-ID')}</div>
+            <div className="stat-value">Rp {totals.totalTax.toLocaleString('id-ID')}</div>
           </div>
         )}
         <div className="stat-card" style={{ background: 'var(--primary-light)', borderColor: 'var(--primary)' }}>

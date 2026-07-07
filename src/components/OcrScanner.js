@@ -21,8 +21,8 @@ function parseReceiptLines(text) {
   return parsed;
 }
 
-export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPerson, onRemovePerson }) {
-  const [splitNewName, setSplitNewName] = useState({}); // { [itemId]: string }
+export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPerson, onRemovePerson, bills, onAddBill, onUpdateBill }) {
+  const [splitNewName, setSplitNewName] = useState({});
   const [ocrText, setOcrText] = useState('');
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('idle');
@@ -31,6 +31,8 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
   const [editingId, setEditingId] = useState(null);
   const [editDesc, setEditDesc] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [billName, setBillName] = useState('');
+  const [billPaidBy, setBillPaidBy] = useState('');
   const fileRef = useRef(null);
 
   const handleImage = useCallback(async (file) => {
@@ -38,6 +40,10 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
     setStatus('scanning');
     setProgress(0);
     setOcrText('');
+
+    // Auto-fill bill name from file name
+    const nameFromFile = file.name.replace(/\.[^.]+$/, '').replace(/[_\-]/g, ' ').trim();
+    setBillName(nameFromFile || 'Receipt');
 
     try {
       const worker = await createWorker('eng', 1, {
@@ -51,12 +57,12 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
 
       const items = parseReceiptLines(data.text);
       if (items.length > 0) {
-        const defaultPayer = people.length > 0 ? people[0].id : '';
+        setBillPaidBy('');
         setParsedItems(
           items.map((item) => ({
             ...item,
-            paidBy: defaultPayer,
-            splitAmong: people.map((p) => p.id),
+            paidBy: '',
+            splitAmong: [],
           }))
         );
       } else {
@@ -126,13 +132,33 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
   };
 
   const addAll = () => {
-    const valid = parsedItems.filter((i) => i.paidBy && i.splitAmong.length > 0);
+    const valid = parsedItems.filter((i) => i.splitAmong.length > 0);
     if (valid.length === 0) return;
-    onAddItems(valid);
+
+    // Create a new bill for this scan
+    const billId = crypto.randomUUID();
+    const name = billName.trim() || `Bill ${bills.length + 1}`;
+
+    // Add bill via callback
+    onAddBill({ name, id: billId, paidBy: billPaidBy });
+
+    // Add items with this billId — use override paidBy if checked, else fall back to billPaidBy
+    onAddItems(
+      valid.map((item) => ({
+        ...item,
+        paidBy: (item.useCustomPaidBy && item.paidBy) ? item.paidBy : billPaidBy,
+        useCustomPaidBy: item.useCustomPaidBy ?? false,
+        splitAmong: item.splitAmong,
+      })),
+      billId
+    );
+
     setParsedItems([]);
     setOcrText('');
     setStatus('idle');
     setProgress(0);
+    setBillName('');
+    setBillPaidBy('');
   };
 
   const reset = () => {
@@ -141,6 +167,8 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
     setStatus('idle');
     setProgress(0);
     setEditingId(null);
+    setBillName('');
+    setBillPaidBy('');
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -152,7 +180,6 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
         <h2 className="card-title">
           <Scan size={20} /> Receipt Scanner
         </h2>
-        {/* <span className="card-badge">Tesseract.js OCR</span> */}
       </div>
 
       {/* Dropzone */}
@@ -194,6 +221,31 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
       {/* Parsed table */}
       {status === 'done' && parsedItems.length > 0 && (
         <div style={{ marginTop: 12 }}>
+          {/* Bill metadata section */}
+          <div style={{ marginBottom: 12, padding: '10px 12px', background: 'var(--gray-50)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-200)', display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label>Bill name</label>
+              <input
+                type="text"
+                placeholder="e.g. Dinner at Pizza Place"
+                value={billName}
+                onChange={(e) => setBillName(e.target.value)}
+              />
+            </div>
+            <div className="form-group" style={{ maxWidth: 200 }}>
+              <label>Bill paid by</label>
+              <PersonSelect
+                value={billPaidBy}
+                onChange={setBillPaidBy}
+                people={people}
+                onAddPerson={onAddPerson}
+                onEditPerson={onEditPerson}
+                onRemovePerson={onRemovePerson}
+                placeholder="—"
+              />
+            </div>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <strong style={{ fontSize: '0.95rem' }}>Parsed Items ({parsedItems.length})</strong>
             <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)' }}>
@@ -205,7 +257,7 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
           <div className="ocr-grid header">
             <span>Item</span>
             <span style={{ textAlign: 'right' }}>Amount</span>
-            <span>Payer</span>
+            <span>Override paid by</span>
             <span>Split</span>
             <span></span>
           </div>
@@ -228,16 +280,29 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
                   </span>
                 )}
 
-                {/* Paid by: use PersonSelect */}
-                <PersonSelect
-                  value={item.paidBy}
-                  onChange={(v) => updateItem(item.id, 'paidBy', v)}
-                  people={people}
-                  onAddPerson={onAddPerson}
-                  onEditPerson={onEditPerson}
-                  onRemovePerson={onRemovePerson}
-                  placeholder="—"
-                />
+                {/* Override paid by: checkbox + PersonSelect */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={item.useCustomPaidBy ?? false}
+                    onChange={(e) => {
+                      updateItem(item.id, 'useCustomPaidBy', e.target.checked);
+                      if (!e.target.checked) updateItem(item.id, 'paidBy', '');
+                    }}
+                    style={{ width: 14, height: 14, accentColor: 'var(--primary)', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, opacity: (item.useCustomPaidBy ?? false) ? 1 : 0.35, transition: 'opacity 0.15s', minWidth: 0 }}>
+                    <PersonSelect
+                      value={(item.useCustomPaidBy ?? false) ? item.paidBy : ''}
+                      onChange={(v) => updateItem(item.id, 'paidBy', v)}
+                      people={people}
+                      onAddPerson={onAddPerson}
+                      onEditPerson={onEditPerson}
+                      onRemovePerson={onRemovePerson}
+                      placeholder="—"
+                    />
+                  </div>
+                </div>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
                   {people.map((p) => {
@@ -306,7 +371,7 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
           })}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button className="btn btn-primary" onClick={addAll} disabled={!parsedItems.some((i) => i.paidBy && i.splitAmong.length > 0)}>
+            <button className="btn btn-primary" onClick={addAll} disabled={!billPaidBy || !parsedItems.some((i) => i.splitAmong.length > 0)}>
               <Plus size={16} /> Add All to Items
             </button>
             <button className="btn btn-outline" onClick={reset}><RefreshCw size={16} /> Scan Another</button>

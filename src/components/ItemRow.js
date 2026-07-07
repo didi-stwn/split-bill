@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Trash2, Pencil, Check, X, ReceiptText, Plus } from 'lucide-react';
 import PersonSelect from './PersonSelect';
 
-export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, globalTaxPercent = 0 }) {
+export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, globalTaxPercent = 0, billPaidBy = '', billTaxPercent = 0, useBillTax = false }) {
   const [editing, setEditing] = useState(false);
   const [desc, setDesc] = useState(item.description);
   const [amount, setAmount] = useState(String(item.amount));
@@ -10,6 +10,7 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
   const [splitAmong, setSplitAmong] = useState([...item.splitAmong]);
   const [useCustomTax, setUseCustomTax] = useState(item.useCustomTax ?? false);
   const [customTaxPercent, setCustomTaxPercent] = useState(String(item.customTaxPercent ?? 0));
+  const [useCustomPaidBy, setUseCustomPaidBy] = useState(item.useCustomPaidBy ?? false);
   const [newPersonName, setNewPersonName] = useState('');
 
   const calcTaxAmount = (amt, pct) => amt * (pct || 0) / 100;
@@ -36,15 +37,18 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
   const save = () => {
     const amt = parseFloat(amount);
     const taxPct = parseFloat(customTaxPercent) || 0;
-    if (!desc.trim() || isNaN(amt) || amt <= 0 || !paidBy || splitAmong.length === 0) return;
+    if (!desc.trim() || isNaN(amt) || amt <= 0 || splitAmong.length === 0) return;
+    // paidBy override is optional — only store paidBy when override is enabled
+    // When disabled, paidBy is empty so settlement resolves dynamically from bill
     onUpdate(item.id, {
       ...item,
       description: desc.trim(),
       amount: amt,
-      paidBy,
+      paidBy: useCustomPaidBy ? paidBy : '',
       splitAmong,
       useCustomTax,
       customTaxPercent: useCustomTax ? taxPct : 0,
+      useCustomPaidBy,
     });
     setEditing(false);
   };
@@ -56,6 +60,7 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
     setSplitAmong([...item.splitAmong]);
     setUseCustomTax(item.useCustomTax ?? false);
     setCustomTaxPercent(String(item.customTaxPercent ?? 0));
+    setUseCustomPaidBy(item.useCustomPaidBy ?? false);
     setEditing(false);
   };
 
@@ -115,10 +120,31 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
               </div>
             </div>
 
-            {/* Row 2: Paid by */}
+            {/* Row 2: Override paid by (checkbox + PersonSelect) */}
             <div className="form-group" style={{ marginBottom: 8 }}>
-              <label>Paid by</label>
-              <PersonSelect value={paidBy} onChange={setPaidBy} people={people} onAddPerson={onAddPerson} onEditPerson={onEditPerson} onRemovePerson={onRemovePerson} />
+              <label>Override paid by</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={useCustomPaidBy}
+                  onChange={(e) => {
+                    setUseCustomPaidBy(e.target.checked);
+                    if (!e.target.checked) setPaidBy('');
+                  }}
+                  style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, opacity: useCustomPaidBy ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                  <PersonSelect
+                    value={useCustomPaidBy ? paidBy : ''}
+                    onChange={setPaidBy}
+                    people={people}
+                    onAddPerson={onAddPerson}
+                    onEditPerson={onEditPerson}
+                    onRemovePerson={onRemovePerson}
+                    placeholder="—"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Row 3: Split among + quick-add */}
@@ -153,10 +179,14 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
           <>
             <div className="item-desc">{item.description}</div>
             <div className="item-meta">
-              {getPersonName(item.paidBy)} paid &middot; {splitLabel}
+              {(item.useCustomPaidBy ?? false)
+                ? `Override paid by ${getPersonName(item.paidBy)}`
+                : `Paid by ${getPersonName(billPaidBy)}`
+              } &middot; {splitLabel}
               {(item.useCustomTax && item.customTaxPercent === 0) && ` · No tax`}
               {(item.useCustomTax && item.customTaxPercent > 0) && ` · ${item.customTaxPercent}% tax`}
-              {(!item.useCustomTax && globalTaxPercent > 0) && ` · ${globalTaxPercent}% tax`}
+              {(!item.useCustomTax && useBillTax && billTaxPercent > 0) && ` · Bill ${billTaxPercent}% tax`}
+              {(!item.useCustomTax && !useBillTax && globalTaxPercent > 0) && ` · ${globalTaxPercent}% tax`}
             </div>
           </>
         )}
@@ -168,7 +198,10 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
           {(item.useCustomTax && item.customTaxPercent > 0) && (
             <div className="item-tax-note">tax +{calcTaxAmount(item.amount, item.customTaxPercent).toLocaleString('id-ID')}</div>
           )}
-          {(!item.useCustomTax && globalTaxPercent > 0) && (
+          {(!item.useCustomTax && useBillTax && billTaxPercent > 0) && (
+            <div className="item-tax-note">tax +{calcTaxAmount(item.amount, billTaxPercent).toLocaleString('id-ID')}</div>
+          )}
+          {(!item.useCustomTax && !useBillTax && globalTaxPercent > 0) && (
             <div className="item-tax-note">tax +{calcTaxAmount(item.amount, globalTaxPercent).toLocaleString('id-ID')}</div>
           )}
         </div>
