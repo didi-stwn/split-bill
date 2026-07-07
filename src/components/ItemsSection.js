@@ -282,7 +282,6 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                             {p.name}
                           </label>
                         ))}
-                        {people.length === 0 && <span className="muted">Add people first</span>}
                         <div className="quick-person-row">
                           <input
                             type="text"
