@@ -252,58 +252,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                         onChange={(e) => setAmount(e.target.value)}
                       />
                     </div>
-                    <div className="form-group" style={{ maxWidth: 130 }}>
-                      <label>Override tax</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input
-                          type="checkbox"
-                          checked={useCustomTax}
-                          onChange={(e) => setUseCustomTax(e.target.checked)}
-                          style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
-                        />
-                        <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: useCustomTax ? 1 : 0.35, transition: 'opacity 0.15s' }}>
-                          <input
-                            type="number"
-                            value={customTaxPercent}
-                            onChange={(e) => setCustomTaxPercent(e.target.value)}
-                            min="0"
-                            max="100"
-                            step="0.5"
-                            disabled={!useCustomTax}
-                            style={{ width: 48, border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: useCustomTax ? 'white' : 'var(--gray-50)' }}
-                          />
-                          <span style={{ padding: '0 6px', fontSize: '0.78rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
-
-                  <div className="form-group" style={{ marginBottom: 10 }}>
-                    <label>Override paid by</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <input
-                        type="checkbox"
-                        checked={useCustomPaidBy}
-                        onChange={(e) => {
-                          setUseCustomPaidBy(e.target.checked);
-                          if (!e.target.checked) setPaidBy('');
-                        }}
-                        style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
-                      />
-                      <div style={{ flex: 1, opacity: useCustomPaidBy ? 1 : 0.35, transition: 'opacity 0.15s' }}>
-                        <PersonSelect
-                          value={useCustomPaidBy ? paidBy : ''}
-                          onChange={setPaidBy}
-                          people={people}
-                          onAddPerson={onAddPerson}
-                          onEditPerson={onEditPerson}
-                          onRemovePerson={onRemovePerson}
-                          placeholder="—"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 10 }}>
                     <div className="form-group" style={{ flex: 1 }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -334,31 +283,80 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                           </label>
                         ))}
                         {people.length === 0 && <span className="muted">Add people first</span>}
-                      </div>
-                    </div>
-                    <div className="form-group" style={{ maxWidth: 160, flexShrink: 0 }}>
-                      <label>&nbsp;</label>
-                      <div className="quick-person-row">
-                        <input
-                          type="text"
-                          placeholder="New name…"
-                          value={newPersonName}
-                          onChange={(e) => setNewPersonName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddQuickPerson(); }}
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-primary"
-                          onClick={handleAddQuickPerson}
-                          disabled={!newPersonName.trim()}
-                          title="Add person"
-                        >
-                          <Plus size={14} />
-                        </button>
+                        <div className="quick-person-row">
+                          <input
+                            type="text"
+                            placeholder="New name…"
+                            value={newPersonName}
+                            onChange={(e) => setNewPersonName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddQuickPerson(); }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={handleAddQuickPerson}
+                            disabled={!newPersonName.trim()}
+                            title="Add person"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Override paid by</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={useCustomPaidBy}
+                          onChange={(e) => {
+                            setUseCustomPaidBy(e.target.checked);
+                            if (!e.target.checked) setPaidBy('');
+                          }}
+                          style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                        />
+                        <div style={{ flex: 1, opacity: useCustomPaidBy ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                          <PersonSelect
+                            value={useCustomPaidBy ? paidBy : ''}
+                            onChange={setPaidBy}
+                            people={people}
+                            onAddPerson={onAddPerson}
+                            onEditPerson={onEditPerson}
+                            onRemovePerson={onRemovePerson}
+                            placeholder="—"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ maxWidth: 130 }}>
+                      <label>Override tax</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={useCustomTax}
+                          onChange={(e) => setUseCustomTax(e.target.checked)}
+                          style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: useCustomTax ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                          <input
+                            type="number"
+                            value={customTaxPercent}
+                            onChange={(e) => setCustomTaxPercent(e.target.value)}
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            disabled={!useCustomTax}
+                            style={{ width: 48, border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: useCustomTax ? 'white' : 'var(--gray-50)' }}
+                          />
+                          <span style={{ padding: '0 6px', fontSize: '0.78rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   <button type="submit" className="btn btn-primary btn-block" disabled={!isValid}>
                     <Plus size={16} /> Add Item
                   </button>

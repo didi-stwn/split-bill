@@ -1049,6 +1049,8 @@ select {
   font-size: 0.82rem;
   outline: none;
   min-width: 0;
+  width: 100px;
+  max-width: 100px;
 }
 
 .quick-person-row input:focus {
@@ -1064,7 +1066,7 @@ select {
   border: 1.5px solid;
   padding: 0 14px 14px;
   margin-bottom: 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .bill-header {
