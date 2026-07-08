@@ -7,14 +7,13 @@ import OcrScanner from './components/OcrScanner';
 import SummarySection from './components/SummarySection';
 
 function createBill(name, paidBy = '') {
-  return { id: crypto.randomUUID(), name, paidBy, useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 };
+  return { id: crypto.randomUUID(), name, paidBy, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 };
 }
 
 export default function App() {
   const [people, setPeople] = useState([]);
   const [bills, setBills] = useState(() => [createBill('Bill 1')]);
   const [items, setItems] = useState([]);
-  const [globalTaxPercent, setGlobalTaxPercent] = useState(0);
   const itemsSectionRef = useRef(null);
   const summarySectionRef = useRef(null);
 
@@ -48,7 +47,6 @@ export default function App() {
         id: billArg.id,
         name: billArg.name || `Bill ${prev.length + 1}`,
         paidBy: billArg.paidBy || '',
-        useBillTax: billArg.useBillTax ?? false,
         billTaxPercent: billArg.billTaxPercent ?? 0,
         useBillDiscount: billArg.useBillDiscount ?? false,
         billDiscountAmount: billArg.billDiscountAmount ?? 0,
@@ -127,12 +125,12 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <OcrScanner {...personProps} {...billProps} onAddItems={handleOcrItems} globalTaxPercent={globalTaxPercent} />
+        <OcrScanner {...personProps} {...billProps} onAddItems={handleOcrItems} />
         <div ref={itemsSectionRef}>
-          <ItemsSection {...personProps} {...billProps} items={items} onAdd={addItem} onDelete={deleteItem} onUpdate={updateItem} taxPercent={globalTaxPercent} onTaxPercentChange={setGlobalTaxPercent} globalTaxPercent={globalTaxPercent} />
+          <ItemsSection {...personProps} {...billProps} items={items} onAdd={addItem} onDelete={deleteItem} onUpdate={updateItem} />
         </div>
         <div ref={summarySectionRef}>
-          <SummarySection items={items} people={people} taxPercent={globalTaxPercent} bills={bills} />
+          <SummarySection items={items} people={people} bills={bills} />
         </div>
         <ExportButton itemsSectionRef={itemsSectionRef} summarySectionRef={summarySectionRef} />
       </main>

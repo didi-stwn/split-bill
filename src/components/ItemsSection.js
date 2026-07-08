@@ -6,7 +6,7 @@ import PersonSelect from './PersonSelect';
 // All bill cards use the same grey style like settlement cards
 const BILL_STYLE = { bg: 'var(--gray-50)', border: 'var(--gray-200)', header: 'var(--gray-100)' };
 
-export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, taxPercent, onTaxPercentChange, globalTaxPercent, bills, onAddBill, onUpdateBill, onDeleteBill }) {
+export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, bills, onAddBill, onUpdateBill, onDeleteBill }) {
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
@@ -78,10 +78,9 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
   // paidBy override is optional — don't require it for validation
   const isValid = desc.trim() && parseFloat(amount) > 0 && splitAmong.length > 0;
 
-  // Calculate totals across all items — priority: Item Tax > Bill Tax > Global Tax
+  // Calculate totals across all items — priority: Item Tax > Bill Tax
   const calcTotalWithTax = (amt, pct) => amt * (1 + (pct || 0) / 100);
   const subtotal = items.reduce((s, i) => s + i.amount, 0);
-  let globalTaxAmount = 0;
   // Per-bill tracking: { billId: { billTax: 0, customTax: 0 } }
   const billTaxDetail = {};
   bills.forEach((b) => { billTaxDetail[b.id] = { billTax: 0, customTax: 0, discount: 0 }; });
@@ -93,12 +92,9 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
       if (bill) {
         billTaxDetail[bill.id].customTax += tax;
       }
-    } else if (bill?.useBillTax && (bill.billTaxPercent ?? 0) > 0) {
+    } else if (bill && (bill.billTaxPercent ?? 0) > 0) {
       billTaxDetail[bill.id].billTax += calcTotalWithTax(item.amount, bill.billTaxPercent) - item.amount;
-    } else {
-      globalTaxAmount += calcTotalWithTax(item.amount, taxPercent) - item.amount;
     }
-    // Track discount per bill (fixed amount applied to bill, not per-item)
   });
   // Discount is stored as a fixed amount per bill
   bills.forEach((bill) => {
@@ -108,7 +104,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
   });
   const billTaxTotal = bills.reduce((s, b) => s + billTaxDetail[b.id].billTax + billTaxDetail[b.id].customTax, 0);
   const billDiscountTotal = bills.reduce((s, b) => s + billTaxDetail[b.id].discount, 0);
-  const totalTaxAmount = globalTaxAmount + billTaxTotal;
+  const totalTaxAmount = billTaxTotal;
   const grandTotal = subtotal + totalTaxAmount - billDiscountTotal;
 
   return (
@@ -174,17 +170,11 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                 />
               </div>
 
-              {/* Bill-level tax override */}
+              {/* Bill-level tax (required) */}
               <div className="bill-meta-row">
                 <label className="bill-paidby-label">Bill Tax</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, width: "100%" }}>
-                  <input
-                    type="checkbox"
-                    checked={bill.useBillTax ?? false}
-                    onChange={(e) => onUpdateBill(bill.id, { useBillTax: e.target.checked })}
-                    style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
-                  />
-                  <div style={{ width: "100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillTax ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                  <div style={{ width: "100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden' }}>
                     <input
                       type="number"
                       value={bill.billTaxPercent ?? 0}
@@ -192,8 +182,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                       min="0"
                       max="100"
                       step="0.5"
-                      disabled={!bill.useBillTax}
-                      style={{ width: "100%", border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: (bill.useBillTax ?? false) ? 'white' : 'var(--gray-50)' }}
+                      style={{ width: "100%", border: 'none', borderRadius: 0, textAlign: 'center', padding: '9px 0', background: 'white' }}
                     />
                     <span style={{ padding: '0 6px', fontSize: '0.78rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
                   </div>
@@ -243,10 +232,8 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                     onAddPerson={onAddPerson}
                     onEditPerson={onEditPerson}
                     onRemovePerson={onRemovePerson}
-                    globalTaxPercent={globalTaxPercent}
                     billPaidBy={bill.paidBy}
                     billTaxPercent={bill.billTaxPercent ?? 0}
-                    useBillTax={bill.useBillTax ?? false}
                   />
                 ))}
               </div>
@@ -403,33 +390,14 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
         <Plus size={16} /> Add Bill
       </button>
 
-      {/* ── Global Tax & Discount Section ── */}
-      <div className="tax-section" id="global-tax-section">
+      {/* ── Tax & Discount Section ── */}
+      <div className="tax-section" id="tax-section">
         <div className="tax-header">
           <Percent size={16} /> Tax & Discount
         </div>
         <div className="tax-row">
           <span>Subtotal</span>
           <span>Rp {subtotal.toLocaleString('id-ID')}</span>
-        </div>
-        <div className="tax-row tax-row--red">
-          <span>Global Tax ({taxPercent}%)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden' }}>
-              <input
-                type="number"
-                className="tax-input"
-                value={taxPercent}
-                onChange={(e) => onTaxPercentChange(parseFloat(e.target.value) || 0)}
-                min="0"
-                max="100"
-                step="0.5"
-                style={{ width: 50, border: 'none', borderRadius: 0, textAlign: 'center', padding: "9px 0px" }}
-              />
-              <span style={{ padding: '0 6px', fontSize: '0.82rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
-            </div>
-            <span>Rp {globalTaxAmount.toLocaleString('id-ID')}</span>
-          </div>
         </div>
         {bills.map((bill) => {
           const detail = billTaxDetail[bill.id];

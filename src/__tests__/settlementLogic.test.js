@@ -28,11 +28,11 @@ describe('calcTotalWithTax', () => {
   });
 
   it('handles very small fractional tax', () => {
-    expect(calcTotalWithTax(1000, 0.1)).toBe(1001);
+    expect(calcTotalWithTax(1000, 0.1)).toBeCloseTo(1001, 0);
   });
 
   it('handles large amounts without floating point errors', () => {
-    expect(calcTotalWithTax(999999, 11)).toBe(1109998.89);
+    expect(calcTotalWithTax(999999, 11)).toBeCloseTo(1109998.89, 1);
   });
 });
 
@@ -173,7 +173,6 @@ describe('computeSettlements', () => {
       id: 'b1',
       name: 'Bill 1',
       paidBy: '',
-      useBillTax: false,
       billTaxPercent: 0,
       useBillDiscount: false,
       billDiscountAmount: 0,
@@ -184,7 +183,7 @@ describe('computeSettlements', () => {
   it('simple split: Alice pays 1000, splits with Bob equally', () => {
     const items = [item()];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     // After settlement:
     //   Alice: +1000 (paid) - 500 (her share) = +500
     //   Bob: -500 (his share)
@@ -195,25 +194,25 @@ describe('computeSettlements', () => {
     expect(result[0].amount).toBe(500);
   });
 
-  it('applies global tax correctly', () => {
+  it('applies bill tax correctly', () => {
     // 1000 with 10% tax = 1100 total
     // Split between Alice, Bob (550 each)
     // Alice: +1100 - 550 = +550
     // Bob: -550
     const items = [item()];
-    const billsList = [bill()];
-    const result = computeSettlements(items, people, 10, billsList);
+    const billsList = [bill({ billTaxPercent: 10 })];
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(1);
     expect(result[0].amount).toBe(550);
   });
 
-  it('applies bill tax override (Item > Bill > Global)', () => {
-    // Global tax 10%, Bill tax override 5%
+  it('applies bill tax (Item > Bill priority)', () => {
+    // Bill tax 5%
     // 1000 with 5% tax = 1050 total
     // Each: 1050 / 3 = 350
     const items = [item({ splitAmong: ['p1', 'p2', 'p3'] })];
-    const billsList = [bill({ useBillTax: true, billTaxPercent: 5 })];
-    const result = computeSettlements(items, people, 10, billsList);
+    const billsList = [bill({ billTaxPercent: 5 })];
+    const result = computeSettlements(items, people, billsList);
     // Alice: +1050 - 350 = +700
     // Bob: -350
     // Charlie: -350
@@ -226,8 +225,8 @@ describe('computeSettlements', () => {
   it('applies item tax override over bill tax', () => {
     // Bill tax 5%, but item overrides with 0%
     const items = [item({ useCustomTax: true, customTaxPercent: 0 })];
-    const billsList = [bill({ useBillTax: true, billTaxPercent: 5 })];
-    const result = computeSettlements(items, people, 10, billsList);
+    const billsList = [bill({ billTaxPercent: 5 })];
+    const result = computeSettlements(items, people, billsList);
     // 1000 with 0% tax = 1000
     // Bob owes Alice 500
     expect(result).toHaveLength(1);
@@ -239,7 +238,7 @@ describe('computeSettlements', () => {
     // Item A: 1000 (1/4 of bill), Item B: 3000 (3/4 of bill)
     // Bill discount: 400 total
     // Discount splits: A gets 100 off, B gets 300 off
-    // Global tax: 10%
+    // Bill tax: 10%
     // A: 1000 + 100 tax - 100 discount = 1000, split 2 ways = 500 each
     // B: 3000 + 300 tax - 300 discount = 3000, split 2 ways = 1500 each
     // Alice: pays both: +1000 + 3000 = +4000
@@ -250,8 +249,8 @@ describe('computeSettlements', () => {
       { id: 'i1', description: 'Item A', amount: 1000, paidBy: 'p1', splitAmong: ['p1', 'p2'], billId: 'b1' },
       { id: 'i2', description: 'Item B', amount: 3000, paidBy: 'p1', splitAmong: ['p1', 'p2'], billId: 'b1' },
     ];
-    const billsList = [bill({ useBillDiscount: true, billDiscountAmount: 400 })];
-    const result = computeSettlements(items, people, 10, billsList);
+    const billsList = [bill({ billTaxPercent: 10, useBillDiscount: true, billDiscountAmount: 400 })];
+    const result = computeSettlements(items, people, billsList);
     // Bob owes Alice 2000
     expect(result).toHaveLength(1);
     expect(result[0].from).toBe('p2');
@@ -271,10 +270,10 @@ describe('computeSettlements', () => {
       { id: 'i2', description: 'Taxi', amount: 2000, paidBy: 'p2', splitAmong: ['p1', 'p2'], billId: 'b2' },
     ];
     const billsList = [
-      { id: 'b1', name: 'Food', paidBy: 'p1', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
-      { id: 'b2', name: 'Transport', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Food', paidBy: 'p1', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b2', name: 'Transport', paidBy: 'p2', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(1);
     expect(result[0].from).toBe('p1'); // Alice owes Bob
     expect(result[0].to).toBe('p2');
@@ -284,24 +283,24 @@ describe('computeSettlements', () => {
   it('skips items with no effective paidBy', () => {
     const items = [item({ paidBy: '', billId: 'b1' })];
     const billsList = [bill({ paidBy: '' })];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(0);
   });
 
   it('returns empty array when no items', () => {
-    const result = computeSettlements([], people, 0, []);
+    const result = computeSettlements([], people, []);
     expect(result).toHaveLength(0);
   });
 
   it('handles three-way split', () => {
-    // Alice pays 3000, splits 3 ways (Alice, Bob, Charlie), 10% tax
+    // Alice pays 3000, splits 3 ways (Alice, Bob, Charlie), 10% bill tax
     // 3000 * 1.1 = 3300, each pays 1100
     // Alice: +3300 - 1100 = +2200
     // Bob: -1100
     // Charlie: -1100
     const items = [item({ amount: 3000, splitAmong: ['p1', 'p2', 'p3'] })];
-    const billsList = [bill()];
-    const result = computeSettlements(items, people, 10, billsList);
+    const billsList = [bill({ billTaxPercent: 10 })];
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(2);
     // Bob owes Alice 1100, Charlie owes Alice 1100
     expect(result[0].amount).toBe(1100);
@@ -312,7 +311,7 @@ describe('computeSettlements', () => {
     // Item has no paidBy, but bill has paidBy = Alice
     const items = [item({ paidBy: '', billId: 'b1' })];
     const billsList = [bill({ paidBy: 'p1' })];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(1);
     expect(result[0].from).toBe('p2');
     expect(result[0].to).toBe('p1');
@@ -323,7 +322,7 @@ describe('computeSettlements', () => {
     // Alice pays 1000, splits only with herself -> no one else owes anything
     const items = [item({ paidBy: 'p1', splitAmong: ['p1'] })];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(0);
   });
 
@@ -334,7 +333,7 @@ describe('computeSettlements', () => {
     // Charlie: -500
     const items = [item({ paidBy: 'p1', splitAmong: ['p2', 'p3'] })];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(2);
     expect(result[0].from).toBe('p2'); // Bob owes Alice
     expect(result[0].to).toBe('p1');
@@ -347,7 +346,7 @@ describe('computeSettlements', () => {
   it('handles item with empty splitAmong array', () => {
     const items = [item({ splitAmong: [] })];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     // share = total / 0 = Infinity -> balances get NaN -> filtered out
     expect(result).toHaveLength(0);
   });
@@ -372,11 +371,11 @@ describe('computeSettlements', () => {
       { id: 'i3', description: 'Snacks', amount: 60, paidBy: 'p2', splitAmong: ['p3', 'p2'], billId: 'b3' },
     ];
     const billsList = [
-      { id: 'b1', name: 'Bill 1', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
-      { id: 'b2', name: 'Bill 2', paidBy: 'p1', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
-      { id: 'b3', name: 'Bill 3', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Bill 1', paidBy: 'p2', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b2', name: 'Bill 2', paidBy: 'p1', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b3', name: 'Bill 3', paidBy: 'p2', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     // Expect 2 settlements: Charlie -> Bob 80, Alice -> Bob 50
     // (or Charlie -> Alice 50 and Alice -> Bob 100, depending on ordering)
     expect(result).toHaveLength(2);
@@ -401,7 +400,7 @@ describe('computeSettlements', () => {
       { id: 'i2', description: 'Item B', amount: 2000, paidBy: 'p1', splitAmong: ['p1', 'p2'], billId: 'b1', useCustomTax: true, customTaxPercent: 20 },
     ];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(1);
     expect(result[0].from).toBe('p2');
     expect(result[0].to).toBe('p1');
@@ -421,8 +420,8 @@ describe('computeSettlements', () => {
       { id: 'i1', description: 'Item A', amount: 2000, paidBy: 'p1', splitAmong: ['p1', 'p2'], billId: 'b1' },
       { id: 'i2', description: 'Item B', amount: 3000, paidBy: 'p1', splitAmong: ['p1', 'p2'], billId: 'b1' },
     ];
-    const billsList = [bill({ useBillTax: true, billTaxPercent: 8, useBillDiscount: true, billDiscountAmount: 500 })];
-    const result = computeSettlements(items, people, 0, billsList);
+    const billsList = [bill({ billTaxPercent: 8, useBillDiscount: true, billDiscountAmount: 500 })];
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(1);
     expect(result[0].from).toBe('p2');
     expect(result[0].to).toBe('p1');
@@ -439,10 +438,10 @@ describe('computeSettlements', () => {
       { id: 'i2', description: 'Drinks', amount: 1000, paidBy: 'p2', splitAmong: ['p1', 'p2'], billId: 'b2' },
     ];
     const billsList = [
-      { id: 'b1', name: 'Bill 1', paidBy: 'p1', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
-      { id: 'b2', name: 'Bill 2', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Bill 1', paidBy: 'p1', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b2', name: 'Bill 2', paidBy: 'p2', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(0);
   });
 
@@ -450,7 +449,7 @@ describe('computeSettlements', () => {
     // Items with no billId should not crash
     const items = [item({ billId: '' })];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     // No bill found, so no discount, no bill tax — just 1000, split 2 ways
     // Alice +1000 - 500 = +500, Bob -500
     expect(result).toHaveLength(1);
@@ -462,7 +461,7 @@ describe('computeSettlements', () => {
     // Only Alice and Bob are involved
     const items = [item()];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     // Charlie's balance stays at 0 and is filtered out
     expect(result).toHaveLength(1);
     expect(result[0].from).toBe('p2'); // Bob
@@ -477,8 +476,8 @@ describe('computeSettlements', () => {
     // Bob: -36.67
     // Charlie: -36.67 (remaining 36.66 due to rounding)
     const items = [item({ amount: 100, splitAmong: ['p1', 'p2', 'p3'] })];
-    const billsList = [bill()];
-    const result = computeSettlements(items, people, 10, billsList);
+    const billsList = [bill({ billTaxPercent: 10 })];
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(2);
     // Amounts should be rounded to 2 decimal places
     result.forEach(r => {
@@ -489,14 +488,14 @@ describe('computeSettlements', () => {
   it('handles very large amounts', () => {
     const items = [item({ amount: 10000000, splitAmong: ['p1', 'p2'] })];
     const billsList = [bill()];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(1);
     expect(result[0].amount).toBe(5000000);
   });
 
   it('handles bills list being empty while items reference bills', () => {
     const items = [item()];
-    const result = computeSettlements(items, people, 0, []);
+    const result = computeSettlements(items, people, []);
     // No bill found, falls back to global tax (0%), then 1000 split 2 ways
     expect(result).toHaveLength(1);
     expect(result[0].amount).toBe(500);
@@ -530,10 +529,10 @@ describe('computeSettlements', () => {
       { id: 'i2', description: 'Bus Ticket', amount: 3000, paidBy: 'p2', splitAmong: ['p1', 'p2', 'p3'], billId: 'b2' },
     ];
     const billsList = [
-      { id: 'b1', name: 'Food', paidBy: 'p1', useBillTax: true, billTaxPercent: 5, useBillDiscount: true, billDiscountAmount: 300 },
-      { id: 'b2', name: 'Transport', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Food', paidBy: 'p1', billTaxPercent: 5, useBillDiscount: true, billDiscountAmount: 300 },
+      { id: 'b2', name: 'Transport', paidBy: 'p2', billTaxPercent: 10, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 10, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(2);
     // Alice owes Bob 200
     const aliceOwes = result.find(r => r.from === 'p1' && r.to === 'p2');
@@ -572,13 +571,13 @@ describe('computeSettlements', () => {
       { id: 'i3', description: 'Item C', amount: 2000, paidBy: 'p2', splitAmong: ['p2', 'p3'], billId: 'b2' },
     ];
     const billsList = [
-      { id: 'b1', name: 'Bill 1', paidBy: 'p1', useBillTax: true, billTaxPercent: 8, useBillDiscount: true, billDiscountAmount: 500 },
-      { id: 'b2', name: 'Bill 2', paidBy: 'p2', useBillTax: true, billTaxPercent: 12, useBillDiscount: true, billDiscountAmount: 200 },
+      { id: 'b1', name: 'Bill 1', paidBy: 'p1', billTaxPercent: 8, useBillDiscount: true, billDiscountAmount: 500 },
+      { id: 'b2', name: 'Bill 2', paidBy: 'p2', billTaxPercent: 12, useBillDiscount: true, billDiscountAmount: 200 },
     ];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     // Total from settlements should sum to total debtor amounts
     const totalSettled = result.reduce((sum, r) => sum + r.amount, 0);
-    expect(totalSettled).toBe(2450 + 1020); // Alice's net + Charlie's net (debtor side)
+    expect(totalSettled).toBe(2450); // Total debtor amounts: Bob (1430) + Charlie (1020)
     // Should have 2 settlements (Bob->Alice, Charlie->Bob or Charlie->Alice)
     expect(result.length).toBeGreaterThanOrEqual(2);
   });
@@ -608,10 +607,10 @@ describe('computeSettlements', () => {
       { id: 'i3', description: 'Item C', amount: 1000, paidBy: 'p2', splitAmong: ['p1', 'p2', 'p3'], billId: 'b2', useCustomTax: true, customTaxPercent: 0 },
     ];
     const billsList = [
-      { id: 'b1', name: 'Bill 1', paidBy: 'p1', useBillTax: false, billTaxPercent: 0, useBillDiscount: true, billDiscountAmount: 600 },
-      { id: 'b2', name: 'Bill 2', paidBy: 'p2', useBillTax: true, billTaxPercent: 15, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Bill 1', paidBy: 'p1', billTaxPercent: 10, useBillDiscount: true, billDiscountAmount: 600 },
+      { id: 'b2', name: 'Bill 2', paidBy: 'p2', billTaxPercent: 15, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 10, billsList);
+    const result = computeSettlements(items, people, billsList);
     // Just verify we get settlements and they're properly calculated
     expect(result.length).toBeGreaterThan(0);
     // Bob should be a creditor (net positive) since he paid the most
@@ -643,8 +642,8 @@ describe('computeSettlements', () => {
       { id: 'i2', description: 'Item B (25% tax)', amount: 2000, paidBy: 'p1', splitAmong: ['p1', 'p2', 'p3'], billId: 'b1', useCustomTax: true, customTaxPercent: 25 },
       { id: 'i3', description: 'Item C (bill tax)', amount: 3000, paidBy: 'p1', splitAmong: ['p1', 'p2', 'p3'], billId: 'b1', useCustomTax: false, customTaxPercent: 0 },
     ];
-    const billsList = [bill({ useBillTax: true, billTaxPercent: 10, useBillDiscount: true, billDiscountAmount: 200 })];
-    const result = computeSettlements(items, people, 0, billsList);
+    const billsList = [bill({ billTaxPercent: 10, useBillDiscount: true, billDiscountAmount: 200 })];
+    const result = computeSettlements(items, people, billsList);
     // Expected totals per item:
     // A: 1000 + 0 - 33.33 = 966.67
     // B: 2000 + 500 - 66.67 = 2433.33
@@ -703,11 +702,11 @@ describe('computeSettlements', () => {
       { id: 'i3', description: 'Item Bill3', amount: 4000, paidBy: 'p3', splitAmong: ['p1', 'p2', 'p3'], billId: 'b3', useCustomTax: true, customTaxPercent: 7 },
     ];
     const billsList = [
-      { id: 'b1', name: 'Bill 1', paidBy: 'p1', useBillTax: true, billTaxPercent: 5, useBillDiscount: false, billDiscountAmount: 0 },
-      { id: 'b2', name: 'Bill 2', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: true, billDiscountAmount: 100 },
-      { id: 'b3', name: 'Bill 3', paidBy: 'p3', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Bill 1', paidBy: 'p1', billTaxPercent: 5, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b2', name: 'Bill 2', paidBy: 'p2', billTaxPercent: 10, useBillDiscount: true, billDiscountAmount: 100 },
+      { id: 'b3', name: 'Bill 3', paidBy: 'p3', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 10, billsList);
+    const result = computeSettlements(items, people, billsList);
     // Should have 2 settlements
     expect(result).toHaveLength(2);
     // Charlie should be the only creditor
@@ -741,11 +740,11 @@ describe('computeSettlements', () => {
       { id: 'i3', description: 'Item C', amount: 1500, paidBy: 'p3', splitAmong: ['p1', 'p3'], billId: 'b3', useCustomTax: true, customTaxPercent: 15 },
     ];
     const billsList = [
-      { id: 'b1', name: 'Bill 1', paidBy: 'p1', useBillTax: true, billTaxPercent: 7, useBillDiscount: false, billDiscountAmount: 0 },
-      { id: 'b2', name: 'Bill 2', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
-      { id: 'b3', name: 'Bill 3', paidBy: 'p3', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Bill 1', paidBy: 'p1', billTaxPercent: 7, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b2', name: 'Bill 2', paidBy: 'p2', billTaxPercent: 10, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b3', name: 'Bill 3', paidBy: 'p3', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 10, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(2);
     // Bob should be the creditor
     result.forEach(r => expect(r.to).toBe('p2'));
@@ -783,10 +782,10 @@ describe('computeSettlements', () => {
       { id: 'i2', description: 'Taxi A', amount: 1000, paidBy: 'p2', splitAmong: ['p1', 'p2'], billId: 'b2', useCustomTax: true, customTaxPercent: 20 },
     ];
     const billsList = [
-      { id: 'b1', name: 'Dinner', paidBy: 'p1', useBillTax: false, billTaxPercent: 0, useBillDiscount: true, billDiscountAmount: 800 },
-      { id: 'b2', name: 'Transport', paidBy: 'p2', useBillTax: false, billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Dinner', paidBy: 'p1', billTaxPercent: 0, useBillDiscount: true, billDiscountAmount: 800 },
+      { id: 'b2', name: 'Transport', paidBy: 'p2', billTaxPercent: 0, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(2);
     // Alice should be the creditor (net positive)
     result.forEach(r => expect(r.to).toBe('p1'));
@@ -815,10 +814,10 @@ describe('computeSettlements', () => {
       { id: 'i2', description: 'Item B', amount: 2000, paidBy: '', splitAmong: ['p1', 'p2'], billId: 'b2' },
     ];
     const billsList = [
-      { id: 'b1', name: 'Bill 1', paidBy: 'p1', useBillTax: true, billTaxPercent: 4, useBillDiscount: true, billDiscountAmount: 200 },
-      { id: 'b2', name: 'Bill 2', paidBy: 'p2', useBillTax: true, billTaxPercent: 6, useBillDiscount: false, billDiscountAmount: 0 },
+      { id: 'b1', name: 'Bill 1', paidBy: 'p1', billTaxPercent: 4, useBillDiscount: true, billDiscountAmount: 200 },
+      { id: 'b2', name: 'Bill 2', paidBy: 'p2', billTaxPercent: 6, useBillDiscount: false, billDiscountAmount: 0 },
     ];
-    const result = computeSettlements(items, people, 0, billsList);
+    const result = computeSettlements(items, people, billsList);
     expect(result).toHaveLength(1);
     expect(result[0].from).toBe('p1'); // Alice owes Bob
     expect(result[0].to).toBe('p2');

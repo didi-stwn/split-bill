@@ -21,7 +21,7 @@ function parseReceiptLines(text) {
   return parsed;
 }
 
-export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPerson, onRemovePerson, bills, onAddBill, onUpdateBill, globalTaxPercent = 0 }) {
+export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPerson, onRemovePerson, bills, onAddBill, onUpdateBill }) {
   const [splitNewName, setSplitNewName] = useState({});
   const [ocrText, setOcrText] = useState('');
   const [progress, setProgress] = useState(0);
@@ -33,7 +33,6 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
   const [editAmount, setEditAmount] = useState('');
   const [billName, setBillName] = useState('');
   const [billPaidBy, setBillPaidBy] = useState('');
-  const [billUseTax, setBillUseTax] = useState(false);
   const [billTaxPercent, setBillTaxPercent] = useState(0);
   const [billUseDiscount, setBillUseDiscount] = useState(false);
   const [billDiscountAmount, setBillDiscountAmount] = useState(0);
@@ -143,13 +142,12 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
     const billId = crypto.randomUUID();
     const name = billName.trim() || `Bill ${bills.length + 1}`;
 
-    // Add bill via callback with optional tax & discount overrides
+    // Add bill via callback with tax & optional discount
     onAddBill({
       name,
       id: billId,
       paidBy: billPaidBy,
-      useBillTax: billUseTax,
-      billTaxPercent: billUseTax ? billTaxPercent : 0,
+      billTaxPercent: billTaxPercent || 0,
       useBillDiscount: billUseDiscount,
       billDiscountAmount: billUseDiscount ? billDiscountAmount : 0,
     });
@@ -171,7 +169,6 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
     setProgress(0);
     setBillName('');
     setBillPaidBy('');
-    setBillUseTax(false);
     setBillTaxPercent(0);
     setBillUseDiscount(false);
     setBillDiscountAmount(0);
@@ -264,29 +261,12 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
               </div>
             </div>
 
-            {/* Row 2: Global Tax + Override Bill Tax + Discount (row on desktop, column on mobile) */}
+            {/* Row 2: Bill Tax + Discount (row on desktop, column on mobile) */}
             <div className="ocr-overrides-row">
-              {/* Global Tax */}
+              {/* Bill Tax */}
               <div className="ocr-override-group">
-                <span className="ocr-global-tax-hint" onClick={() => {
-                  const el = document.getElementById('global-tax-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }}>
-                  Global Tax: <strong>{globalTaxPercent}%</strong>
-                </span>
-              </div>
-
-              {/* Override Bill Tax */}
-              <div className="ocr-override-group">
-                <label className="ocr-override-check">
-                  <input
-                    type="checkbox"
-                    checked={billUseTax}
-                    onChange={(e) => { setBillUseTax(e.target.checked); if (!e.target.checked) setBillTaxPercent(0); }}
-                  />
-                  Override Bill Tax
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: billUseTax ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                <label className="ocr-override-check">Bill Tax</label>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden' }}>
                   <input
                     type="number"
                     value={billTaxPercent || '0'}
@@ -294,7 +274,7 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
                     min="0"
                     max="100"
                     step="0.1"
-                    style={{ width: 70, border: 'none', borderRadius: 0, textAlign: 'center', padding: '7px 0', background: billUseTax ? 'white' : 'var(--gray-50)' }}
+                    style={{ width: 70, border: 'none', borderRadius: 0, textAlign: 'center', padding: '7px 0', background: 'white' }}
                   />
                   <span style={{ padding: '0 6px', fontSize: '0.82rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
                 </div>

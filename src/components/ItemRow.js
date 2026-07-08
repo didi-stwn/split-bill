@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Trash2, Pencil, Check, X, ReceiptText, Plus } from 'lucide-react';
 import PersonSelect from './PersonSelect';
 
-export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, globalTaxPercent = 0, billPaidBy = '', billTaxPercent = 0, useBillTax = false }) {
+export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson, onEditPerson, onRemovePerson, billPaidBy = '', billTaxPercent = 0 }) {
   const [editing, setEditing] = useState(false);
   const [desc, setDesc] = useState(item.description);
   const [amount, setAmount] = useState(String(item.amount));
@@ -184,8 +184,7 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
               } &middot; {splitLabel}
               {(item.useCustomTax && item.customTaxPercent === 0) && ` · No tax`}
               {(item.useCustomTax && item.customTaxPercent > 0) && ` · ${item.customTaxPercent}% tax`}
-              {(!item.useCustomTax && useBillTax && billTaxPercent > 0) && ` · Bill ${billTaxPercent}% tax`}
-              {(!item.useCustomTax && !useBillTax && globalTaxPercent > 0) && ` · ${globalTaxPercent}% tax`}
+              {(!item.useCustomTax && billTaxPercent > 0) && ` · Bill ${billTaxPercent}% tax`}
             </div>
           </>
         )}
@@ -197,11 +196,8 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
           {(item.useCustomTax && item.customTaxPercent > 0) && (
             <div className="item-tax-note">tax +{calcTaxAmount(item.amount, item.customTaxPercent).toLocaleString('id-ID')}</div>
           )}
-          {(!item.useCustomTax && useBillTax && billTaxPercent > 0) && (
+          {(!item.useCustomTax && billTaxPercent > 0) && (
             <div className="item-tax-note">tax +{calcTaxAmount(item.amount, billTaxPercent).toLocaleString('id-ID')}</div>
-          )}
-          {(!item.useCustomTax && !useBillTax && globalTaxPercent > 0) && (
-            <div className="item-tax-note">tax +{calcTaxAmount(item.amount, globalTaxPercent).toLocaleString('id-ID')}</div>
           )}
         </div>
       )}

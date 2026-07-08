@@ -21,7 +21,7 @@ export function applyDiscountAndTax(itemAmount, bill, effectiveTax, billSubtotal
   return { originalAmount: itemAmount, taxAmount, discountAmount, total };
 }
 
-export function computeSettlements(items, people, globalTaxPercent, bills) {
+export function computeSettlements(items, people, bills) {
   const balances = {};
   people.forEach((p) => (balances[p.id] = 0));
 
@@ -34,15 +34,15 @@ export function computeSettlements(items, people, globalTaxPercent, bills) {
   });
 
   items.forEach((item) => {
-    // Tax priority: Item override > Bill override > Global
+    // Tax priority: Item override > Bill (required)
     const bill = bills?.find((b) => b.id === item.billId);
     let effectiveTax;
     if (item.useCustomTax) {
       effectiveTax = item.customTaxPercent ?? 0;
-    } else if (bill?.useBillTax) {
+    } else if (bill) {
       effectiveTax = bill.billTaxPercent ?? 0;
     } else {
-      effectiveTax = globalTaxPercent;
+      effectiveTax = 0;
     }
     const { total } = applyDiscountAndTax(item.amount, bill, effectiveTax, billSubtotals[item.billId] || 0);
     const share = total / item.splitAmong.length;
@@ -84,8 +84,8 @@ export function computeSettlements(items, people, globalTaxPercent, bills) {
   return settlements;
 }
 
-export default function SummarySection({ items, people, taxPercent = 0, bills = [] }) {
-  const settlements = useMemo(() => computeSettlements(items, people, taxPercent, bills), [items, people, taxPercent, bills]);
+export default function SummarySection({ items, people, bills = [] }) {
+  const settlements = useMemo(() => computeSettlements(items, people, bills), [items, people, bills]);
   const [checkedSettlements, setCheckedSettlements] = useState(() => ({}));
 
   const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
@@ -117,10 +117,10 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
       let effectiveTax;
       if (item.useCustomTax) {
         effectiveTax = item.customTaxPercent ?? 0;
-      } else if (bill?.useBillTax) {
+      } else if (bill) {
         effectiveTax = bill.billTaxPercent ?? 0;
       } else {
-        effectiveTax = taxPercent;
+        effectiveTax = 0;
       }
       const { total } = applyDiscountAndTax(item.amount, bill, effectiveTax, billSubtotals[item.billId] || 0);
       const share = total / item.splitAmong.length;
@@ -163,7 +163,7 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
         billBreakdown,
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [items, people, taxPercent, bills]);
+  }, [items, people, bills]);
 
   const toggleSettlementCheck = (idx) => {
     setCheckedSettlements((prev) => ({ ...prev, [idx]: !prev[idx] }));
@@ -184,7 +184,6 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
 
   const totals = useMemo(() => {
     let subtotal = 0;
-    let globalTaxAmount = 0;
     let customTaxAmount = 0;
     let billTaxAmount = 0;
     let discountAmount = 0;
@@ -201,31 +200,28 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
       let effectiveTax;
       if (item.useCustomTax) {
         effectiveTax = item.customTaxPercent ?? 0;
-      } else if (bill?.useBillTax) {
+      } else if (bill) {
         effectiveTax = bill.billTaxPercent ?? 0;
       } else {
-        effectiveTax = taxPercent;
+        effectiveTax = 0;
       }
       const { taxAmount, discountAmount: itemDisc } = applyDiscountAndTax(item.amount, bill, effectiveTax, billSubtotals[item.billId] || 0);
       discountAmount += itemDisc;
       if (item.useCustomTax) {
         customTaxAmount += taxAmount;
-      } else if (bill?.useBillTax && (bill.billTaxPercent ?? 0) > 0) {
-        billTaxAmount += taxAmount;
       } else {
-        globalTaxAmount += taxAmount;
+        billTaxAmount += taxAmount;
       }
     });
     return {
       subtotal,
-      globalTaxAmount,
       customTaxAmount,
       billTaxAmount,
-      totalTax: globalTaxAmount + customTaxAmount + billTaxAmount,
+      totalTax: customTaxAmount + billTaxAmount,
       discountAmount,
-      grandTotal: subtotal + globalTaxAmount + customTaxAmount + billTaxAmount - discountAmount,
+      grandTotal: subtotal + customTaxAmount + billTaxAmount - discountAmount,
     };
-  }, [items, taxPercent, bills]);
+  }, [items, bills]);
 
   return (
     <div className="card">

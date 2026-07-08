@@ -31,12 +31,13 @@ export default function ExportButton({ itemsSectionRef, summarySectionRef }) {
           sel.parentNode?.replaceChild(textSpan, sel);
         });
 
-        // 2. Remove disabled Override Bill Tax and Discount rows (checkbox unchecked)
+        // 2. Remove disabled Discount rows (checkbox unchecked).
+        //    Bill Tax is always enabled (no checkbox), so it's always kept.
         clone.querySelectorAll('.bill-meta-row').forEach((row) => {
           const label = row.querySelector('.bill-paidby-label');
           if (!label) return;
           const labelText = label.textContent?.trim();
-          if (labelText === 'Bill Tax' || labelText === 'Discount') {
+          if (labelText === 'Discount') {
             const checkbox = row.querySelector('input[type="checkbox"]');
             if (!checkbox || !checkbox.checked) {
               row.remove();
@@ -60,7 +61,7 @@ export default function ExportButton({ itemsSectionRef, summarySectionRef }) {
           el.parentNode?.replaceChild(span, el);
         });
 
-        // 5. For Override Bill Tax / Discount rows: replace the entire border-wrapper div
+        // 5. For Bill Tax / Discount rows: replace the entire border-wrapper div
         //    (which looks like an input box) with a clean text value like "20%" or "30,000"
         clone.querySelectorAll('.bill-meta-row').forEach((row) => {
           const label = row.querySelector('.bill-paidby-label');
@@ -85,18 +86,7 @@ export default function ExportButton({ itemsSectionRef, summarySectionRef }) {
           }
         });
 
-        // 6. In global tax rows (not bill-meta-rows), remove the input wrapper div
-        clone.querySelectorAll('.tax-row').forEach((row) => {
-          row.querySelectorAll('div').forEach((wrapper) => {
-            const kids = wrapper.children;
-            if (kids.length >= 2) {
-              const last = kids[kids.length - 1];
-              if (last?.textContent?.trim() === '%') {
-                wrapper.remove();
-              }
-            }
-          });
-        });
+        // 6. (removed — global tax section no longer exists)
 
         wrapper.appendChild(clone);
       }

@@ -894,19 +894,6 @@ select {
   cursor: pointer;
 }
 
-.ocr-global-tax-hint {
-  font-size: 0.82rem;
-  color: var(--gray-500);
-  cursor: pointer;
-  transition: color var(--transition);
-  user-select: none;
-}
-
-.ocr-global-tax-hint:hover {
-  color: var(--primary);
-  text-decoration: underline;
-}
-
 .ocr-item-card {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
