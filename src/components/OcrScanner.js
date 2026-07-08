@@ -289,7 +289,7 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
                 <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: billUseTax ? 1 : 0.35, transition: 'opacity 0.15s' }}>
                   <input
                     type="number"
-                    value={billTaxPercent || ''}
+                    value={billTaxPercent || '0'}
                     onChange={(e) => setBillTaxPercent(parseFloat(e.target.value) || 0)}
                     min="0"
                     max="100"
