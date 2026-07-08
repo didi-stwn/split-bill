@@ -458,13 +458,13 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
         </div>
       )}
 
-      {/* Raw text */}
+      {/* Raw text
       {status === 'done' && ocrText && (
         <details style={{ marginTop: 10 }}>
           <summary style={{ fontSize: '0.82rem', color: 'var(--gray-500)', cursor: 'pointer' }}>Raw OCR Text</summary>
           <div className="ocr-result" style={{ marginTop: 6, fontSize: '0.78rem' }}>{ocrText}</div>
         </details>
-      )}
+      )} */}
 
       {/* No items parsed */}
       {status === 'done' && parsedItems.length === 0 && (
