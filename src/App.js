@@ -127,7 +127,7 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <OcrScanner {...personProps} {...billProps} onAddItems={handleOcrItems} />
+        <OcrScanner {...personProps} {...billProps} onAddItems={handleOcrItems} globalTaxPercent={globalTaxPercent} />
         <div ref={itemsSectionRef}>
           <ItemsSection {...personProps} {...billProps} items={items} onAdd={addItem} onDelete={deleteItem} onUpdate={updateItem} taxPercent={globalTaxPercent} onTaxPercentChange={setGlobalTaxPercent} globalTaxPercent={globalTaxPercent} />
         </div>

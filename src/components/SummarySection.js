@@ -91,10 +91,8 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
   const getPersonName = (id) => people.find((p) => p.id === id)?.name || 'Unknown';
 
 
-  // Compute per-person balances for the detail breakdown
-  const balances = useMemo(() => {
-    const bal = {};
-    people.forEach((p) => (bal[p.id] = 0));
+  // Compute per-person balances with per-bill breakdown
+  const balanceDetails = useMemo(() => {
     // Pre-compute bill subtotals for proportional discount splitting
     const billSubtotals = {};
     items.forEach((item) => {
@@ -102,6 +100,18 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
         billSubtotals[item.billId] = (billSubtotals[item.billId] || 0) + item.amount;
       }
     });
+
+    // For each person: totalPaid (what they paid), totalAmount (their share of everything),
+    // plus per-bill breakdown of their share amounts
+    const personData = {};
+    people.forEach((p) => {
+      personData[p.id] = {
+        totalPaid: 0,
+        totalAmount: 0,
+        billDetails: {}, // { billId: shareAmount }
+      };
+    });
+
     items.forEach((item) => {
       const bill = bills?.find((b) => b.id === item.billId);
       let effectiveTax;
@@ -115,18 +125,44 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
       const { total } = applyDiscountAndTax(item.amount, bill, effectiveTax, billSubtotals[item.billId] || 0);
       const share = total / item.splitAmong.length;
       const effectivePaidBy = item.paidBy || bill?.paidBy || '';
+
+      // Track amount paid by the payer (full item total)
       if (effectivePaidBy) {
-        bal[effectivePaidBy] = (bal[effectivePaidBy] || 0) + total;
+        personData[effectivePaidBy].totalPaid += total;
       }
+
+      // Track each split member's share, broken down by bill
       item.splitAmong.forEach((id) => {
-        bal[id] -= share;
+        personData[id].totalAmount += share;
+        if (item.billId) {
+          personData[id].billDetails[item.billId] = (personData[id].billDetails[item.billId] || 0) + share;
+        }
       });
     });
-    return Object.entries(bal).map(([id, balance]) => ({
-      id,
-      name: getPersonName(id),
-      balance: Math.round(balance * 100) / 100,
-    })).sort((a, b) => b.balance - a.balance);
+
+    return Object.entries(personData).map(([id, data]) => {
+      const totalAmount = Math.round(data.totalAmount * 100) / 100;
+      const totalPaid = Math.round(data.totalPaid * 100) / 100;
+      const balance = Math.round((data.totalPaid - data.totalAmount) * 100) / 100;
+
+      // Attach bill names to the breakdown
+      const billBreakdown = Object.entries(data.billDetails)
+        .map(([billId, amount]) => ({
+          billId,
+          billName: bills.find((b) => b.id === billId)?.name || billId,
+          amount: Math.round(amount * 100) / 100,
+        }))
+        .sort((a, b) => b.amount - a.amount);
+
+      return {
+        id,
+        name: getPersonName(id),
+        totalAmount,
+        totalPaid,
+        balance,
+        billBreakdown,
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
   }, [items, people, taxPercent, bills]);
 
   const toggleSettlementCheck = (idx) => {
@@ -269,32 +305,72 @@ export default function SummarySection({ items, people, taxPercent = 0, bills = 
         ) : null}
 
         {/* ── Balance Detail ── */}
-        {
-          balances.filter(b => b.balance !== 0).length > 0 && (
-            <div className="balance-section">
-              <div className="settlements-header">
-                <DollarSign size={16} /> Balance Detail
-              </div>
-              <div className="balance-list">
-                {balances.filter(b => b.balance !== 0).map((b) => {
-                  const isPositive = b.balance > 0;
-                  const isNegative = b.balance < 0;
-                  return (
-                    <div key={b.id} className={`balance-item ${isPositive ? 'positive' : isNegative ? 'negative' : 'zero'}`}>
-                      <span className="balance-name">{b.name}</span>
-                      <span className="balance-value">
-                        {isPositive ? '+' : ''}Rp {Math.abs(b.balance).toLocaleString('id-ID')}
-                      </span>
-                      <span className="balance-label">
-                        {isPositive ? 'gets back' : isNegative ? 'owes' : 'settled'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+        {balanceDetails.length > 0 && (
+          <div className="balance-section">
+            <div className="settlements-header">
+              <DollarSign size={16} /> Balance Detail
             </div>
-          )
-        }
+            <div className="balance-detail-list">
+              {balanceDetails.map((d) => {
+                const isPositive = d.balance > 0;
+                const isNegative = d.balance < 0;
+                const isZero = d.balance === 0;
+                let itemClass = 'balance-detail-item';
+                if (isPositive) itemClass += ' positive';
+                else if (isNegative) itemClass += ' negative';
+                else itemClass += ' zero';
+                return (
+                  <div key={d.id} className={itemClass}>
+                    {/* Summary row */}
+                    <div className="balance-detail-summary">
+                      <span className="balance-detail-name">{d.name}</span>
+                      <div className="balance-detail-stats">
+                        <span className="balance-detail-stat">
+                          <span className="stat-label">Total Paid</span>
+                          <span className="stat-value">Rp {d.totalPaid.toLocaleString('id-ID')}</span>
+                        </span>
+                        <div className='balance-detail-separator' />
+                        <span className="balance-detail-stat">
+                          <span className="stat-label">Total Amount</span>
+                          <span className="stat-value">Rp {d.totalAmount.toLocaleString('id-ID')}</span>
+                        </span>
+                        <div className='balance-detail-separator' />
+                        <span className="balance-detail-result">
+                          {isZero ? (
+                            <>
+                              <span className="stat-value" style={{ color: 'var(--gray-400)' }}>
+                                Rp 0
+                              </span>
+                              <span className="stat-label" style={{ color: 'var(--gray-400)' }}>
+                                settled
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={`stat-label ${isPositive ? 'green' : 'red'}`}>
+                                {isPositive ? 'gets back' : 'owes'}
+                              </span>
+                              <span className={`stat-value ${isPositive ? 'green' : 'red'}`}>
+                                Rp {Math.abs(d.balance).toLocaleString('id-ID')}
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Per-bill breakdown */}
+                    {d.billBreakdown.map((bill) => (
+                      <div key={bill.billId} className="balance-detail-bill">
+                        <span className="bill-name">{bill.billName}</span>
+                        <span className="bill-amount">Rp {bill.amount.toLocaleString('id-ID')}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

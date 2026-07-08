@@ -177,14 +177,14 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
               {/* Bill-level tax override */}
               <div className="bill-meta-row">
                 <label className="bill-paidby-label">Bill Tax</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, width:"100%" }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, width: "100%" }}>
                   <input
                     type="checkbox"
                     checked={bill.useBillTax ?? false}
                     onChange={(e) => onUpdateBill(bill.id, { useBillTax: e.target.checked })}
                     style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
                   />
-                  <div style={{ width:"100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillTax ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                  <div style={{ width: "100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillTax ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
                     <input
                       type="number"
                       value={bill.billTaxPercent ?? 0}
@@ -203,14 +203,14 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
               {/* Bill-level discount (fixed Rp amount) */}
               <div className="bill-meta-row">
                 <label className="bill-paidby-label">Discount</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, width:"100%" }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, width: "100%" }}>
                   <input
                     type="checkbox"
                     checked={bill.useBillDiscount ?? false}
                     onChange={(e) => onUpdateBill(bill.id, { useBillDiscount: e.target.checked })}
                     style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
                   />
-                  <div style={{ width:"100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillDiscount ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                  <div style={{ width: "100%", display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (bill.useBillDiscount ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
                     <input
                       type="number"
                       value={bill.billDiscountAmount ?? 0}
@@ -404,7 +404,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
       </button>
 
       {/* ── Global Tax & Discount Section ── */}
-      <div className="tax-section">
+      <div className="tax-section" id="global-tax-section">
         <div className="tax-header">
           <Percent size={16} /> Tax & Discount
         </div>
@@ -442,20 +442,20 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
             <div key={bill.id}>
               {showBill && (
                 <div className="tax-row tax-row--red">
-                  <span>{bill.name} Tax ({pct}%)</span>
-                  <span>Rp {detail.billTax.toLocaleString('id-ID')}</span>
+                  <span className='tax-row-tax'>Tax {bill.name} ({pct}%)</span>
+                  <span className='tax-row-tax-value'>Rp {detail.billTax.toLocaleString('id-ID')}</span>
                 </div>
               )}
               {showCustom && (
                 <div className="tax-row tax-row--red">
-                  <span>Other {bill.name} Tax</span>
-                  <span>Rp {detail.customTax.toLocaleString('id-ID')}</span>
+                  <span className='tax-row-tax'>Other Tax {bill.name}</span>
+                  <span className='tax-row-tax-value'>Rp {detail.customTax.toLocaleString('id-ID')}</span>
                 </div>
               )}
               {showDiscount && (
                 <div className="tax-row discount-row">
-                  <span>Discount {bill.name}</span>
-                  <span>-Rp {detail.discount.toLocaleString('id-ID')}</span>
+                  <span className='tax-row-tax'>Discount {bill.name}</span>
+                  <span className='tax-row-tax-value'>-Rp {detail.discount.toLocaleString('id-ID')}</span>
                 </div>
               )}
             </div>
