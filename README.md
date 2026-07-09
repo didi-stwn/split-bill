@@ -2,6 +2,42 @@
 
 A frontend-only **SplitBill** application for splitting expenses among friends. Built with React and Tesseract.js for OCR receipt scanning — no backend, no database, everything runs entirely in the browser. Supports **multiple bills** with a **per-bill tax** (required) and **per-item tax override**, plus **per-bill fixed discount**.
 
+## Preview
+
+<p align="center">
+  <a href="https://didi-stwn.github.io/split-bill/" target="_blank" rel="noopener noreferrer">
+    <img src="public/split_bill.png" alt="Split Bill Preview" width="100%" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://didi-stwn.github.io/split-bill/" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/🚀_Live_Demo-Click_Here-4FC08D?style=for-the-badge" alt="Live Demo" />
+  </a>
+</p>
+
+## Example Split Bill
+
+1. **Upload a receipt** — Scan a receipt image with OCR, then add people and verify the parsed data.
+
+<p align="center">
+  <img src="public/dummy.jpeg" alt="Dummy Bill Preview" width="100%" />
+  <img src="public/add_receipt.jpeg" alt="Add Receipt" width="100%" />
+</p>
+
+2. **Items added** — All items are successfully added to the bill with correct amounts and split assignments.
+
+<p align="center">
+  <img src="public/success_add_receipt.jpeg" alt="Success Add Receipt" width="100%" />
+</p>
+
+3. **Summary & Export** — The bill is automatically summarised with tax/discount calculations, settlement amounts are computed, and the result can be exported as a PNG image.
+
+<p align="center">
+  <img src="public/summary.jpeg" alt="Summary" width="100%" />
+  <img src="public/export_to_png.jpeg" alt="Export to PNG" width="100%" />
+</p>
+
 ## Features
 
 - **📷 Receipt Scanner** — Upload a receipt image and automatically parse item names & amounts using Tesseract.js (browser-based OCR). Configure bill name, bill paid by, bill tax, and discount before adding items
