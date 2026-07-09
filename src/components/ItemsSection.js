@@ -345,6 +345,7 @@ export default function ItemsSection({ people, items, onAdd, onDelete, onUpdate,
                             onEditPerson={onEditPerson}
                             onRemovePerson={onRemovePerson}
                             placeholder="—"
+                            disabledIds={activeBill?.paidBy ? [activeBill.paidBy] : []}
                           />
                         </div>
                       </div>

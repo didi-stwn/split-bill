@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Check, X, ChevronDown, Users } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
-export default function PersonSelect({ value, onChange, people, onAddPerson, onEditPerson, onRemovePerson, placeholder = 'Select' }) {
+export default function PersonSelect({ value, onChange, people, onAddPerson, onEditPerson, onRemovePerson, placeholder = 'Select', disabledIds = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -124,10 +124,11 @@ export default function PersonSelect({ value, onChange, people, onAddPerson, onE
           <ul className="person-select-list">
             {people.map((p) => {
               const isEditing = editingId === p.id;
+              const isDisabled = disabledIds.includes(p.id);
               return (
                 <li
                   key={p.id}
-                  className={`person-select-item ${value === p.id ? 'selected' : ''}`}
+                  className={`person-select-item ${value === p.id ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
                 >
                   {isEditing ? (
                     <div className="person-select-edit-row">
@@ -149,9 +150,11 @@ export default function PersonSelect({ value, onChange, people, onAddPerson, onE
                     <>
                       <span
                         className="person-select-name"
-                        onClick={() => { onChange(p.id); setIsOpen(false); }}
+                        onClick={() => { if (!isDisabled) { onChange(p.id); setIsOpen(false); } }}
+                        style={isDisabled ? { color: 'var(--gray-400)', cursor: 'not-allowed', fontStyle: 'italic' } : {}}
                       >
                         {p.name}
+                        {isDisabled && <span style={{ marginLeft: 6, fontSize: '0.7rem', color: 'var(--gray-400)' }}>(bill payer)</span>}
                       </span>
                       <div className="person-select-item-actions">
                         <button className="btn-icon" onClick={() => startEdit(p)} title="Edit">

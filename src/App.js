@@ -102,6 +102,9 @@ export default function App() {
         amount: item.amount,
         paidBy: item.paidBy,
         splitAmong: item.splitAmong,
+        useCustomPaidBy: item.useCustomPaidBy ?? false,
+        useCustomTax: item.useCustomTax ?? false,
+        customTaxPercent: item.useCustomTax ? (item.customTaxPercent ?? 0) : 0,
         billId: billId || bills[0]?.id || '',
       }));
       setItems((prev) => [...prev, ...newItems]);

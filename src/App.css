@@ -324,6 +324,10 @@ select {
   color: var(--danger);
 }
 
+.border-danger {
+  border: solid 1px var(--danger);
+}
+
 .btn-danger:hover {
   background: #fef2f2;
 }
@@ -561,6 +565,14 @@ select {
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
+}
+
+.person-select-item.disabled {
+  opacity: 0.55;
+}
+
+.person-select-item.disabled:hover {
+  background: transparent;
 }
 
 .person-select-item:hover {

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
-import { Scan, Upload, Loader2, Plus, Trash2, RefreshCw, Pencil, Check, X } from 'lucide-react';
+import { Scan, Upload, Loader2, Plus, Trash2, RefreshCw, ReceiptText } from 'lucide-react';
 import PersonSelect from './PersonSelect';
 
 function parseReceiptLines(text) {
@@ -28,9 +28,6 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
   const [status, setStatus] = useState('idle');
   const [dragOver, setDragOver] = useState(false);
   const [parsedItems, setParsedItems] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editDesc, setEditDesc] = useState('');
-  const [editAmount, setEditAmount] = useState('');
   const [billName, setBillName] = useState('');
   const [billPaidBy, setBillPaidBy] = useState('');
   const [billTaxPercent, setBillTaxPercent] = useState(0);
@@ -66,6 +63,8 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
             ...item,
             paidBy: '',
             splitAmong: [],
+            useCustomTax: false,
+            customTaxPercent: 0,
           }))
         );
       } else {
@@ -112,28 +111,6 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
 
   const removeParsed = (id) => setParsedItems((prev) => prev.filter((i) => i.id !== id));
 
-  const startEdit = (item) => {
-    setEditingId(item.id);
-    setEditDesc(item.description);
-    setEditAmount(String(item.amount));
-  };
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditDesc('');
-    setEditAmount('');
-  };
-  const saveEdit = (item) => {
-    const amt = parseFloat(editAmount);
-    if (!editDesc.trim() || isNaN(amt) || amt <= 0) return;
-    updateItem(item.id, 'description', editDesc.trim());
-    updateItem(item.id, 'amount', amt);
-    cancelEdit();
-  };
-  const handleKey = (e, item) => {
-    if (e.key === 'Enter') saveEdit(item);
-    if (e.key === 'Escape') cancelEdit();
-  };
-
   const addAll = () => {
     const valid = parsedItems.filter((i) => i.splitAmong.length > 0);
     if (valid.length === 0) return;
@@ -158,6 +135,8 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
         ...item,
         paidBy: (item.useCustomPaidBy && item.paidBy) ? item.paidBy : billPaidBy,
         useCustomPaidBy: item.useCustomPaidBy ?? false,
+        useCustomTax: item.useCustomTax ?? false,
+        customTaxPercent: item.useCustomTax ? (item.customTaxPercent ?? 0) : 0,
         splitAmong: item.splitAmong,
       })),
       billId
@@ -179,9 +158,11 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
     setOcrText('');
     setStatus('idle');
     setProgress(0);
-    setEditingId(null);
     setBillName('');
     setBillPaidBy('');
+    setBillTaxPercent(0);
+    setBillUseDiscount(false);
+    setBillDiscountAmount(0);
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -312,56 +293,50 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
             </span>
           </div>
 
-          {parsedItems.map((item) => {
-            const isEditing = editingId === item.id;
-            return (
-              <div key={item.id} className="ocr-item-card">
-                {/* Row 1: description + amount + actions */}
-                <div className="ocr-item-header">
-                  {isEditing ? (
-                    <div className="ocr-item-edit-fields">
-                      <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} onKeyDown={(e) => handleKey(e, item)} className="ocr-edit-input" style={{ flex: 1 }} autoFocus />
-                      <input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} onKeyDown={(e) => handleKey(e, item)} className="ocr-edit-input" style={{ width: 90, textAlign: 'right' }} min="0" step="100" />
+          {parsedItems.map((item) => (
+            <div key={item.id} className="item-row">
+              <div className="item-icon top">
+                <ReceiptText size={16} />
+              </div>
+              <div className="item-body">
+                <div className="item-edit-full" style={{ padding: 0 }}>
+                  {/* Row 1: Description, Amount */}
+                  <div className="form-row" style={{ marginBottom: 6 }}>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Description</label>
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                      />
                     </div>
-                  ) : (
-                    <div className="ocr-item-info">
-                      <span className="ocr-item-desc" onClick={() => startEdit(item)}>{item.description}</span>
-                      <span className="ocr-item-amt" onClick={() => startEdit(item)}>Rp {item.amount.toLocaleString('id-ID')}</span>
+                    <div className="form-group" style={{ maxWidth: 110 }}>
+                      <label>Amount</label>
+                      <input
+                        type="number"
+                        value={item.amount}
+                        onChange={(e) => updateItem(item.id, 'amount', parseFloat(e.target.value) || 0)}
+                        min="0"
+                        step="1"
+                      />
                     </div>
-                  )}
-                  <div className="ocr-item-actions">
-                    {isEditing ? (
-                      <>
-                        <button className="btn-icon" onClick={() => saveEdit(item)} style={{ color: 'var(--success)' }}><Check size={14} /></button>
-                        <button className="btn-icon" onClick={cancelEdit}><X size={14} /></button>
-                      </>
-                    ) : (
-                      <>
-                        <button className="btn-icon" onClick={() => startEdit(item)}><Pencil size={13} /></button>
-                        <button className="btn-icon danger" onClick={() => removeParsed(item.id)}><Trash2 size={13} /></button>
-                      </>
-                    )}
                   </div>
-                </div>
 
-                {/* Row 3: Split */}
-                <div className="ocr-item-detail">
-                  <span className="ocr-detail-label">Split</span>
-                  <div className="ocr-detail-value ocr-split-row">
-                    {people.map((p) => {
-                      const sel = item.splitAmong.includes(p.id);
-                      return (
-                        <label key={p.id} className={`ocr-chip ${sel ? 'sel' : ''}`}>
-                          <input type="checkbox" checked={sel} onChange={() => toggleSplit(item.id, p.id)} style={{ display: 'none' }} />
-                          {p.name}
-                        </label>
-                      );
-                    })}
-                    <div style={{ position: 'relative' }}>
-                      {splitNewName[item.id] !== undefined ? (
-                        <div style={{ display: 'flex', gap: 2 }}>
+                  {/* Split among */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Split among</label>
+                      <div className="split-checkboxes">
+                        {people.map((p) => (
+                          <label key={p.id} className={`split-checkbox ${item.splitAmong.includes(p.id) ? 'selected' : ''}`}>
+                            <input type="checkbox" checked={item.splitAmong.includes(p.id)} onChange={() => toggleSplit(item.id, p.id)} />
+                            {p.name}
+                          </label>
+                        ))}
+                        <div className="quick-person-row">
                           <input
                             type="text"
+                            placeholder="New name…"
                             value={splitNewName[item.id] || ''}
                             onChange={(e) => setSplitNewName((prev) => ({ ...prev, [item.id]: e.target.value }))}
                             onKeyDown={(e) => {
@@ -374,60 +349,96 @@ export default function OcrScanner({ people, onAddItems, onAddPerson, onEditPers
                                 }
                                 setSplitNewName((prev) => ({ ...prev, [item.id]: undefined }));
                               }
-                              if (e.key === 'Escape') {
-                                setSplitNewName((prev) => ({ ...prev, [item.id]: undefined }));
-                              }
                             }}
-                            style={{ width: 70, padding: '2px 6px', border: '1.5px solid var(--primary)', borderRadius: 4, fontSize: '0.75rem' }}
-                            autoFocus
                           />
-                          <button className="btn-icon" style={{ width: 20, height: 20 }} onClick={() => setSplitNewName((prev) => ({ ...prev, [item.id]: undefined }))}><X size={11} /></button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={() => {
+                              const trimmed = (splitNewName[item.id] || '').trim();
+                              if (trimmed && !people.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) {
+                                const newP = { id: crypto.randomUUID(), name: trimmed };
+                                onAddPerson(newP);
+                                toggleSplit(item.id, newP.id);
+                              }
+                              setSplitNewName((prev) => ({ ...prev, [item.id]: undefined }));
+                            }}
+                            disabled={!(splitNewName[item.id] || '').trim()}
+                          >
+                            <Plus size={14} />
+                          </button>
                         </div>
-                      ) : (
-                        <button
-                          className="btn-icon"
-                          style={{ width: 22, height: 22, background: 'var(--gray-100)', borderRadius: '50%' }}
-                          onClick={() => setSplitNewName((prev) => ({ ...prev, [item.id]: '' }))}
-                          title="Add person"
-                        >
-                          <Plus size={12} />
-                        </button>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-
-                {/* Row 2: Override paid by */}
-                <div className="ocr-item-detail">
-                  <span className="ocr-detail-label">Override paid by</span>
-                  <div className="ocr-detail-value">
-                    <input
-                      type="checkbox"
-                      checked={item.useCustomPaidBy ?? false}
-                      onChange={(e) => {
-                        updateItem(item.id, 'useCustomPaidBy', e.target.checked);
-                        if (!e.target.checked) updateItem(item.id, 'paidBy', '');
-                      }}
-                      style={{ width: 14, height: 14, accentColor: 'var(--primary)', flexShrink: 0 }}
-                    />
-                    <div style={{ flex: 1, opacity: (item.useCustomPaidBy ?? false) ? 1 : 0.35, transition: 'opacity 0.15s', minWidth: 0 }}>
-                      <PersonSelect
-                        value={(item.useCustomPaidBy ?? false) ? item.paidBy : ''}
-                        onChange={(v) => updateItem(item.id, 'paidBy', v)}
-                        people={people}
-                        onAddPerson={onAddPerson}
-                        onEditPerson={onEditPerson}
-                        onRemovePerson={onRemovePerson}
-                        placeholder="—"
-                      />
+                  {/* Override paid by + Override tax */}
+                  <div className="form-row">
+                    <div className="form-group" style={{ marginBottom: 8 }}>
+                      <label>Override paid by</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={item.useCustomPaidBy ?? false}
+                          onChange={(e) => {
+                            updateItem(item.id, 'useCustomPaidBy', e.target.checked);
+                            if (!e.target.checked) updateItem(item.id, 'paidBy', '');
+                          }}
+                          style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                        />
+                        <div style={{ flex: 1, opacity: (item.useCustomPaidBy ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                          <PersonSelect
+                            value={(item.useCustomPaidBy ?? false) ? item.paidBy : ''}
+                            onChange={(v) => updateItem(item.id, 'paidBy', v)}
+                            people={people}
+                            onAddPerson={onAddPerson}
+                            onEditPerson={onEditPerson}
+                            onRemovePerson={onRemovePerson}
+                            placeholder="—"
+                            disabledIds={billPaidBy ? [billPaidBy] : []}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ maxWidth: 130 }}>
+                      <label>Override tax</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={item.useCustomTax ?? false}
+                          onChange={(e) => {
+                            updateItem(item.id, 'useCustomTax', e.target.checked);
+                            if (!e.target.checked) updateItem(item.id, 'customTaxPercent', 0);
+                          }}
+                          style={{ width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--gray-300)', borderRadius: 6, overflow: 'hidden', opacity: (item.useCustomTax ?? false) ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                          <input
+                            type="number"
+                            value={item.customTaxPercent ?? 0}
+                            onChange={(e) => updateItem(item.id, 'customTaxPercent', parseFloat(e.target.value) || 0)}
+                            min="0"
+                            max="100"
+                            step="0.5"
+                            disabled={!item.useCustomTax}
+                            style={{ width: 48, border: 'none', borderRadius: 0, textAlign: 'center', padding: '7px 0', background: (item.useCustomTax ?? false) ? 'white' : 'var(--gray-50)' }}
+                          />
+                          <span style={{ padding: '0 6px', fontSize: '0.78rem', color: 'var(--gray-500)', background: 'var(--gray-50)' }}>%</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
+                  {/* Delete button */}
+                  <div style={{ marginTop: 12, display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+                    <button className="btn btn-sm btn-danger border-danger" onClick={() => removeParsed(item.id)}>
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  </div>
+                </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button className="btn btn-primary" onClick={addAll} disabled={!billPaidBy || !parsedItems.some((i) => i.splitAmong.length > 0)}>

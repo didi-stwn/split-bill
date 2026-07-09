@@ -136,6 +136,7 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
                       onEditPerson={onEditPerson}
                       onRemovePerson={onRemovePerson}
                       placeholder="—"
+                      disabledIds={billPaidBy ? [billPaidBy] : []}
                     />
                   </div>
                 </div>
@@ -183,8 +184,8 @@ export default function ItemRow({ item, people, onDelete, onUpdate, onAddPerson,
                 : `Paid by ${getPersonName(billPaidBy)}`
               } &middot; {splitLabel}
               {(item.useCustomTax && item.customTaxPercent === 0) && ` · No tax`}
-              {(item.useCustomTax && item.customTaxPercent > 0) && ` · ${item.customTaxPercent}% tax`}
-              {(!item.useCustomTax && billTaxPercent > 0) && ` · Bill ${billTaxPercent}% tax`}
+              {(item.useCustomTax && item.customTaxPercent > 0) && ` · Override ${item.customTaxPercent}% tax`}
+              {(!item.useCustomTax && billTaxPercent > 0) && ` · ${billTaxPercent}% tax`}
             </div>
           </>
         )}
