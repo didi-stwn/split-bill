@@ -4,7 +4,7 @@ A frontend-only **SplitBill** application for splitting expenses among friends. 
 
 ## Preview
 
-[![Split Bill Preview](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/split_bill.png)](https://didi-stwn.github.io/split-bill/)
+[![Split Bill Preview](./public/split_bill.png)](https://didi-stwn.github.io/split-bill/)
 
 [![🚀 Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Click_Here-4FC08D?style=for-the-badge)](https://didi-stwn.github.io/split-bill/)
 
@@ -12,19 +12,19 @@ A frontend-only **SplitBill** application for splitting expenses among friends. 
 
 1. **Upload a receipt** — Scan a receipt image with OCR, then add people and verify the parsed data.
 
-![Dummy Bill Preview](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/dummy.jpeg)
+![Dummy Bill Preview](./public/dummy.jpeg)
 
-![Add Receipt](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/add_receipt.jpeg)
+![Add Receipt](./public/add_receipt.jpeg)
 
 2. **Items added** — All items are successfully added to the bill with correct amounts and split assignments.
 
-![Success Add Receipt](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/success_add_receipt.jpeg)
+![Success Add Receipt](./public/success_add_receipt.jpeg)
 
 3. **Summary & Export** — The bill is automatically summarised with tax/discount calculations, settlement amounts are computed, and the result can be exported as a PNG image.
 
-![Summary](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/summary.jpeg)
+![Summary](./public/summary.jpeg)
 
-![Export to PNG](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/export_to_png.jpeg)
+![Export to PNG](./public/export_to_png.jpeg)
 
 ## Features
 
