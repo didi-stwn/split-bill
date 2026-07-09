@@ -4,39 +4,27 @@ A frontend-only **SplitBill** application for splitting expenses among friends. 
 
 ## Preview
 
-<p align="center">
-  <a href="https://didi-stwn.github.io/split-bill/" target="_blank" rel="noopener noreferrer">
-    <img src="public/split_bill.png" alt="Split Bill Preview" width="100%" />
-  </a>
-</p>
+[![Split Bill Preview](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/split_bill.png)](https://didi-stwn.github.io/split-bill/)
 
-<p align="center">
-  <a href="https://didi-stwn.github.io/split-bill/" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/🚀_Live_Demo-Click_Here-4FC08D?style=for-the-badge" alt="Live Demo" />
-  </a>
-</p>
+[![🚀 Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Click_Here-4FC08D?style=for-the-badge)](https://didi-stwn.github.io/split-bill/)
 
 ## Example Split Bill
 
 1. **Upload a receipt** — Scan a receipt image with OCR, then add people and verify the parsed data.
 
-<p align="center">
-  <img src="public/dummy.jpeg" alt="Dummy Bill Preview" width="100%" />
-  <img src="public/add_receipt.jpeg" alt="Add Receipt" width="100%" />
-</p>
+![Dummy Bill Preview](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/dummy.jpeg)
+
+![Add Receipt](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/add_receipt.jpeg)
 
 2. **Items added** — All items are successfully added to the bill with correct amounts and split assignments.
 
-<p align="center">
-  <img src="public/success_add_receipt.jpeg" alt="Success Add Receipt" width="100%" />
-</p>
+![Success Add Receipt](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/success_add_receipt.jpeg)
 
 3. **Summary & Export** — The bill is automatically summarised with tax/discount calculations, settlement amounts are computed, and the result can be exported as a PNG image.
 
-<p align="center">
-  <img src="public/summary.jpeg" alt="Summary" width="100%" />
-  <img src="public/export_to_png.jpeg" alt="Export to PNG" width="100%" />
-</p>
+![Summary](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/summary.jpeg)
+
+![Export to PNG](https://raw.githubusercontent.com/didi-stwn/split-bill/main/public/export_to_png.jpeg)
 
 ## Features
 
