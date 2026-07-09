@@ -334,11 +334,11 @@ export default function SummarySection({ items, people, bills = [] }) {
                         <span className="balance-detail-result">
                           {isZero ? (
                             <>
-                              <span className="stat-value" style={{ color: 'var(--gray-400)' }}>
-                                Rp 0
-                              </span>
                               <span className="stat-label" style={{ color: 'var(--gray-400)' }}>
                                 settled
+                              </span>
+                              <span className="stat-value" style={{ color: 'var(--gray-400)' }}>
+                                Rp 0
                               </span>
                             </>
                           ) : (
